@@ -81,22 +81,24 @@ def search_value(kvs, search_key):
 
 def lambda_handler(event,context):
     try:
+        print(event)
+        print("fetching KV map")
         key_map, value_map, block_map = get_kv_map(event.file_name)
 
         # Get Key Value relationship
         kvs = get_kv_relationship(key_map, value_map, block_map)
-        output_str = "\n\n== FOUND KEY : VALUE pairs ===\n"
+        print("\n\n== FOUND KEY : VALUE pairs ===\n")
         print_kvs(kvs)
 
         key_set = ['key','value','test']
 
         # Start searching a key value
         for search_key in key_set:
-            output_str += 'The value is:', search_value(kvs, search_key) + "\n"
+            print('The value is:', search_value(kvs, search_key) + "\n")
 
         return {
             'statusCode': 200,
-            'body': output_str
+            'body': 'success'
         }
     except:
         return {

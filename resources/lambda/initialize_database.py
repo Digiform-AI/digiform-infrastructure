@@ -7,7 +7,7 @@ from aws_lambda_powertools.utilities import parameters
 
 
 def lambda_handler(event, context):   
-    SECRET = json.loads(parameters.get_secret(os.environ.get("RDS_SECRET_NAME")))
+    SECRET = json.loads(parameters.get_secret(os.environ.get("DB_SECRET_NAME")))
 
     connection = psycopg2.connect(
         database=SECRET.get("engine"),
