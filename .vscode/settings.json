@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./cdk.out/asset.fbeea6c1771db2257ae20fe8a6b0143a160181f1bcea9588423d4cdb2a3f2b23"
+    ]
+}
