@@ -1,0 +1,103 @@
+openapi: 3.0.3
+info:
+  title: API Specification
+  description: |-
+    This document relays endpoints
+  contact:
+    email: dpobrien@albany.edu
+  version: 1.0.0
+paths:
+  # USERS
+  /users/:
+    get:
+      tags:
+        - Users
+      summary: Returns all users stored in the database
+      description: Authenticated Endpoint
+      operationId: retrieve-users
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:     
+                  $ref: '#/components/schemas/User'
+                  
+  /user/:
+    get:
+      tags:
+        - Users
+      summary: Returns a user stored in the database by email
+      description: Authenticated Endpoint
+      operationId: retrieve-user
+      parameters:
+        - in: header
+          name: email
+          schema:
+            type: string
+          required: true
+          description: Email of user to retrieve
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:     
+                  $ref: '#/components/schemas/User'
+
+  
+
+  # DOCUMENTS
+  /documents/:
+    get:
+      tags:
+        - Documents
+      summary: Returns all documents stored in the database
+      description: Authenticated Endpoint
+      operationId: retrieve-documents
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:     
+                  $ref: '#/components/schemas/Document'
+ 
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        userId:
+          type: number
+          example: 1738
+          nullable: false
+        first:
+          type: string
+          example: Jon
+          nullable: false
+        last:
+          type: string
+          example: Smith
+          nullable: false
+        email:
+          type: string
+          example: jsmith@gmail.com
+          nullable: false
+    Document:
+      type: object
+      properties:
+        documentId:
+          type: number
+          example: 3481
+          nullable: false
+        document_name:
+          type: string
+          example: Contract
+          nullable: false

@@ -1,6 +1,11 @@
-# CDK TypeScript project
+# CDK for Digiform
 
-The `cdk.json` file tells the CDK Toolkit how to execute the app.
+## Resource/endpoint documentation
+
+To view the documentation for the API endpoints, visit (the swagger editor)[https://editor.swagger.io/], and copy/paste the file endpoints.yaml
+
+The API endpoint is: https://wh5bs8h969.execute-api.us-east-1.amazonaws.com/prod
+
 
 ## Useful commands
 

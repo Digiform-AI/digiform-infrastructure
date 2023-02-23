@@ -20,7 +20,7 @@ def lambda_handler(event, context):
     try:
         cursor = connection.cursor()
 
-        cursor.execute("SELECT * FROM Users")
+        cursor.execute("SELECT * FROM Documents")
         results = cursor.fetchall()
         cursor.close()
         connection.commit()

@@ -161,6 +161,49 @@ export class DigiformStack extends cdk.Stack {
 			securityGroups: [lambdaSG],
 		});
 
+
+		// define textract lambda
+		const fetchUserLambda = new PythonFunction(this, 'FetchUser', {
+			entry: './resources/lambda/',
+			runtime: Runtime.PYTHON_3_7,
+			index: 'fetch_user.py',
+			handler: 'lambda_handler',
+			environment: {
+				DB_ENDPOINT_ADDRESS: dbProxy.endpoint,
+				DB_NAME: databaseName,
+				DB_SECRET_ARN: dbInstance.secret?.secretFullArn || '',
+				DB_SECRET_NAME: dbInstance.secret?.secretName!,
+				BUCKET: bucket.bucketName,
+			},
+			timeout: Duration.minutes(5), 
+			vpc,
+			vpcSubnets: vpc.selectSubnets({
+			  subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+			}),
+			securityGroups: [lambdaSG],
+		});
+
+		// define textract lambda
+		const fetchDocumentsLambda = new PythonFunction(this, 'FetchDocuments', {
+			entry: './resources/lambda/',
+			runtime: Runtime.PYTHON_3_7,
+			index: 'fetch_documents.py',
+			handler: 'lambda_handler',
+			environment: {
+				DB_ENDPOINT_ADDRESS: dbProxy.endpoint,
+				DB_NAME: databaseName,
+				DB_SECRET_ARN: dbInstance.secret?.secretFullArn || '',
+				DB_SECRET_NAME: dbInstance.secret?.secretName!,
+				BUCKET: bucket.bucketName,
+			},
+			timeout: Duration.minutes(5), 
+			vpc,
+			vpcSubnets: vpc.selectSubnets({
+			  subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+			}),
+			securityGroups: [lambdaSG],
+		});
+
 		/*
 			ACCESS SPECIFICATIONS
 		*/
@@ -178,6 +221,16 @@ export class DigiformStack extends cdk.Stack {
 		dbInstance.secret?.grantRead(fetchUsersLambda);
 		dbInstance.secret?.grantWrite(fetchUsersLambda);
 		bucket.grantReadWrite(fetchUsersLambda);
+
+		//fetch users lambda
+		dbInstance.secret?.grantRead(fetchUserLambda);
+		dbInstance.secret?.grantWrite(fetchUserLambda);
+		bucket.grantReadWrite(fetchUserLambda);
+
+		//fetch documents lambda
+		dbInstance.secret?.grantRead(fetchDocumentsLambda);
+		dbInstance.secret?.grantWrite(fetchDocumentsLambda);
+		bucket.grantReadWrite(fetchDocumentsLambda);
 
 		// limit traffic to DB to port 5432
 		dbSecurityGroup.addIngressRule(
@@ -209,6 +262,10 @@ export class DigiformStack extends cdk.Stack {
 			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
 		});
 
+		const fetchDocumentsIntegration = new apigateway.LambdaIntegration(fetchDocumentsLambda, {
+			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
+		});
+
 		const files = api.root.addResource('files');
 		files.addMethod("GET", getFilesIntegration);
 
@@ -217,5 +274,11 @@ export class DigiformStack extends cdk.Stack {
 
 		const users = api.root.addResource('users');
 		users.addMethod("GET", fetchUsersIntegration);
+
+		const user = api.root.addResource('user');
+		user.addMethod("GET", fetchUsersIntegration);
+
+		const documents = api.root.addResource('documents');
+		documents.addMethod("GET", fetchDocumentsIntegration);
 	}
 }
