@@ -44,7 +44,6 @@ export class DigiformStack extends cdk.Stack {
 			DB SPECIFICATIONS
 		*/
 
-
 		// security group controls access to DB (IPs and port)
 		const dbSecurityGroup = new ec2.SecurityGroup(this, 'DbSecurityGroup', {
 			vpc,
@@ -141,6 +140,27 @@ export class DigiformStack extends cdk.Stack {
 			securityGroups: [lambdaSG],
 		});
 
+		// define textract lambda
+		const fetchUsersLambda = new PythonFunction(this, 'FetchUsers', {
+			entry: './resources/lambda/',
+			runtime: Runtime.PYTHON_3_7,
+			index: 'fetch_users.py',
+			handler: 'lambda_handler',
+			environment: {
+				DB_ENDPOINT_ADDRESS: dbProxy.endpoint,
+				DB_NAME: databaseName,
+				DB_SECRET_ARN: dbInstance.secret?.secretFullArn || '',
+				DB_SECRET_NAME: dbInstance.secret?.secretName!,
+				BUCKET: bucket.bucketName,
+			},
+			timeout: Duration.minutes(5), 
+			vpc,
+			vpcSubnets: vpc.selectSubnets({
+			  subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+			}),
+			securityGroups: [lambdaSG],
+		});
+
 		/*
 			ACCESS SPECIFICATIONS
 		*/
@@ -154,7 +174,10 @@ export class DigiformStack extends cdk.Stack {
 		dbInstance.secret?.grantWrite(textractLambda);
 		bucket.grantReadWrite(textractLambda);
 
-
+		//fetch users lambda
+		dbInstance.secret?.grantRead(fetchUsersLambda);
+		dbInstance.secret?.grantWrite(fetchUsersLambda);
+		bucket.grantReadWrite(fetchUsersLambda);
 
 		// limit traffic to DB to port 5432
 		dbSecurityGroup.addIngressRule(
@@ -162,7 +185,6 @@ export class DigiformStack extends cdk.Stack {
 			ec2.Port.tcp(5432),
 			'Lambda to Postgres database'
 		);
-
 
 		/*
 			API SPECIFICATIONS
@@ -179,7 +201,11 @@ export class DigiformStack extends cdk.Stack {
 			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
 		});
 
-		const textractIntegration = new apigateway.LambdaIntegration(autoScalingLambda, {
+		const textractIntegration = new apigateway.LambdaIntegration(textractLambda, {
+			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
+		});
+
+		const fetchUsersIntegration = new apigateway.LambdaIntegration(fetchUsersLambda, {
 			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
 		});
 
@@ -188,5 +214,8 @@ export class DigiformStack extends cdk.Stack {
 
 		const pdf = api.root.addResource('pdf');
 		pdf.addMethod("GET", textractIntegration);
+
+		const users = api.root.addResource('users');
+		users.addMethod("GET", fetchUsersIntegration);
 	}
 }

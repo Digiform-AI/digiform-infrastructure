@@ -3,13 +3,21 @@ import sys
 import re
 import json
 from collections import defaultdict
-
+import os
 
 def get_kv_map(file_name):
-    with open(file_name, 'rb') as file:
-        img_test = file.read()
-        bytes_test = bytearray(img_test)
-        print('Image loaded', file_name)
+    s3 = boto3.resource('s3')
+    obj = s3.Object(os.getenv('BUCKET'), file_name)
+    print("object")
+    print(obj)
+
+    body = obj.get()['Body'].read()
+
+    print("body")
+    print(body)
+
+    bytes_test = bytearray(body)
+    print('Image loaded', file_name)
 
     # process using image bytes
     client = boto3.client('textract')
@@ -81,11 +89,12 @@ def search_value(kvs, search_key):
 
 def lambda_handler(event,context):
     try:
-        print(event)
+        print(event['file_name'])
         print("fetching KV map")
-        key_map, value_map, block_map = get_kv_map(event.file_name)
+        key_map, value_map, block_map = get_kv_map(event['file_name'])
 
         # Get Key Value relationship
+        print("getting relationships")
         kvs = get_kv_relationship(key_map, value_map, block_map)
         print("\n\n== FOUND KEY : VALUE pairs ===\n")
         print_kvs(kvs)
@@ -100,8 +109,9 @@ def lambda_handler(event,context):
             'statusCode': 200,
             'body': 'success'
         }
-    except:
+    except Exception as e:
+        print(str(e))
         return {
             'statusCode': 400,
-            'body': 'error occured'
+            'body': str(e)
         }
