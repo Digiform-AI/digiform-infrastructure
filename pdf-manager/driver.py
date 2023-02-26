@@ -4,7 +4,7 @@ from pdfManager import PdfGenerator
 from api import Api
 
 # Sample Driver code 
-apiRef = Api(self)
+apiRef = Api()
 server = Server()
 
 myOrg = server.createOrg("ABC Construction")
