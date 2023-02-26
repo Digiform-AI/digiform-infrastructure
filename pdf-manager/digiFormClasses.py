@@ -1,5 +1,6 @@
 from pdfManager import PdfGenerator, PdfReader
 from pdfStructure import *
+from datetime import datetime
 import os, time, shutil
 
 # Server class 
@@ -54,8 +55,11 @@ class Member:
         # We need the responder's ID.. or can we just pass the responder object themself?
         # I will try to pass responder but I'm wondering how passing objects over the network will be
         # as opposed to passing the ID and then finding the object at the other end.
+
+        now = current_dateTime = datetime.now()
+
         
-        response = pdfResponse(self, "Current_Date", fields, formID, org)
+        response = pdfResponse(self, str(now.month) +" / "+str(now.day)+" / "+str(now.year), fields, formID, org)
         org.receiveFormResponse(response)
 
 

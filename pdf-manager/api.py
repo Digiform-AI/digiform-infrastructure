@@ -15,6 +15,11 @@ class Api:
     myOrg.sendFormRequest(newForm, myMember)
     myMember.selectForm(myOrg, 0) # Select this form for updates
 
+    # Member submits the currently selected form
+    @app.route('/submitCurrentForm/', methods = ['GET','POST'])
+    def submitCurrentForm():
+        Api.myMember.submitFormResponse()
+        return "Submitted "+Api.myMember.currentForm.name
 
     # This member updates a value for the active form
     @app.route('/updateField/<fieldIndex>/<newVal>/', methods = ['GET'])
@@ -86,7 +91,7 @@ class Api:
     
     
     def __init__(self):
-        self.app.run(debug=True)
+        self.app.run(debug=True, port= 5000)
 
 Api()
 

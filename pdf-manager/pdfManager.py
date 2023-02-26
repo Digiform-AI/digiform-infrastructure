@@ -2,8 +2,9 @@ from pypdf import PdfReader, PdfWriter
 from pdfStructure import pdfForm, pdfElement, Consts
 from pypdf.generic import BooleanObject, NameObject, IndirectObject, TextStringObject, NumberObject
 from pypdf.constants import *
-import fillpdf
-from fillpdf import fillpdfs
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfform
+from reportlab.lib.colors import magenta, pink, blue, green
 
 import xlsxwriter
 
@@ -21,6 +22,27 @@ import shutil
 
 
 class PdfGenerator():
+
+    # Create a pdf from desktop site
+    def createPdf(fields):
+        c = canvas.Canvas('example.pdf')
+        c.setFont("Courier", 20)
+        c.drawCentredString(300, 700, 'Form Title')
+
+        c.setFont("Courier", 14)
+        form = c.acroForm
+
+        for field in fields:
+            ht = 650
+
+            if field:
+                c.drawString(10, ht, 'Cat:')
+                form.checkbox(name='cb2', tooltip='Checkbox',
+                x=110, y= ht - 55, buttonStyle='cross',
+                borderWidth=2, forceBorder=True)
+
+
+
 
     # Generate excel from response
     def generateExcel(form):
@@ -132,7 +154,6 @@ class PdfGenerator():
         newFile = formFolder + response.responder.firstName+" "+response.responder.lastName +".pdf" # Name it responder.pdf
         # shutil.copy(sourceForm.path, newFile)
 
-    # TODO: Now we must WRITE TO THE PDF the given fields.
         reader = PdfReader(sourceForm.path)
 
         writer = PdfWriter()
