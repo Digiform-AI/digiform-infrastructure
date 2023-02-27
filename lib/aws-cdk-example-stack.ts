@@ -162,11 +162,32 @@ export class DigiformStack extends cdk.Stack {
 		});
 
 
-		// define textract lambda
+		// define fetch user lambda
 		const fetchUserLambda = new PythonFunction(this, 'FetchUser', {
 			entry: './resources/lambda/',
 			runtime: Runtime.PYTHON_3_7,
 			index: 'fetch_user.py',
+			handler: 'lambda_handler',
+			environment: {
+				DB_ENDPOINT_ADDRESS: dbProxy.endpoint,
+				DB_NAME: databaseName,
+				DB_SECRET_ARN: dbInstance.secret?.secretFullArn || '',
+				DB_SECRET_NAME: dbInstance.secret?.secretName!,
+				BUCKET: bucket.bucketName,
+			},
+			timeout: Duration.minutes(5), 
+			vpc,
+			vpcSubnets: vpc.selectSubnets({
+			  subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+			}),
+			securityGroups: [lambdaSG],
+		});
+
+		// define insert user lambda
+		const insertUserLambda = new PythonFunction(this, 'InsertUser', {
+			entry: './resources/lambda/',
+			runtime: Runtime.PYTHON_3_7,
+			index: 'insert_user.py',
 			handler: 'lambda_handler',
 			environment: {
 				DB_ENDPOINT_ADDRESS: dbProxy.endpoint,
@@ -232,6 +253,11 @@ export class DigiformStack extends cdk.Stack {
 		dbInstance.secret?.grantWrite(fetchDocumentsLambda);
 		bucket.grantReadWrite(fetchDocumentsLambda);
 
+		//insert user lambda
+		dbInstance.secret?.grantRead(insertUserLambda);
+		dbInstance.secret?.grantWrite(insertUserLambda);
+		bucket.grantReadWrite(insertUserLambda);
+
 		// limit traffic to DB to port 5432
 		dbSecurityGroup.addIngressRule(
 			lambdaSG,
@@ -262,6 +288,10 @@ export class DigiformStack extends cdk.Stack {
 			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
 		});
 
+		const insertUserIntegration = new apigateway.LambdaIntegration(insertUserLambda, {
+			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
+		});
+
 		const fetchDocumentsIntegration = new apigateway.LambdaIntegration(fetchDocumentsLambda, {
 			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
 		});
@@ -277,6 +307,7 @@ export class DigiformStack extends cdk.Stack {
 
 		const user = api.root.addResource('user');
 		user.addMethod("GET", fetchUsersIntegration);
+		user.addMethod("POST", insertUserIntegration);
 
 		const documents = api.root.addResource('documents');
 		documents.addMethod("GET", fetchDocumentsIntegration);
