@@ -1,4 +1,4 @@
-from flask import Flask, current_app
+from flask import Flask, current_app, request
 from digiFormClasses import Member, Organization, Server
 
 class Api:
@@ -16,12 +16,30 @@ class Api:
     myMember.selectForm(myOrg, 0) # Select this form for updates
 
     # Member submits the currently selected form
-    @app.route('/submitCurrentForm/', methods = ['GET','POST'])
+    @app.route('/submitForm/', methods = ['GET','POST'])
     def submitCurrentForm():
+        res = request.body
+        for key in res.keys():
+            value = res[key]["value"] # Dictionary of field name : field value, looking for key "value"
+            Api.myMember.respondToField(int(key), value) # Respond to each field
+
+
+
         Api.myMember.submitFormResponse()
         return "Submitted "+Api.myMember.currentForm.name
+    
+    # Member saves current form
+    @app.route('/saveForm/', methods = ['GET', 'POST'])
+    def saveForm():
+        res = request.body
+        for key in res.keys():
+            value = res[key]["value"] # Dictionary of field name : field value, looking for key "value"
+            Api.myMember.respondToField(int(key), value) # Respond to each field
+
+        # Same as above submit function but just stores and does not submit
 
     # This member updates a value for the active form
+    # This is not used anymore because we instead want to just send all values at once
     @app.route('/updateField/<fieldIndex>/<newVal>/', methods = ['GET'])
     def updateField(fieldIndex, newVal):
 
