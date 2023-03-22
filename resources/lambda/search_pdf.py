@@ -106,6 +106,7 @@ def lambda_handler(event,context):
             print('The value is:', search_value(kvs, search_key) + "\n")
 
         return {
+            'Access-Control-Allow-Origin': '*',
             'statusCode': 200,
             'body': 'success'
         }
