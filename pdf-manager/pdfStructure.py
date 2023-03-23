@@ -74,12 +74,13 @@ class pdfForm:
 
 # A readible struct. We create when a user updates a value for a field 
 class pdfElement:
-    def __init__(self, name, type, value, index, rect):
+    def __init__(self, name, type, value, index, rect, generated):
         self.name = name
         self.type = type
         self.value = value
         self.index = index
         self.rect = rect
+        self.generated = generated
         
         # Multiple choice properties
         self.singleChoice = False
@@ -115,7 +116,7 @@ class Consts:
     checkBoxDisplayYes = "Yes"
     checkBoxDisplayNo = "No"
     checkBoxNoState = "/Off"
-    checkBoxYesState = "/0"
+    checkBoxYesState = ["/0", "/Yes"]
 
     # DO NOT EDIT (unless you're really, really smart)
     textTypeID = "/Tx"

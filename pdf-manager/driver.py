@@ -1,14 +1,13 @@
 from digiFormClasses import Organization, Server, Member
-from pdfStructure import pdfResponse, Consts
+from pdfStructure import pdfElement, Consts
 from pdfManager import PdfGenerator
 from api import Api
 
 # Sample Driver code 
-apiRef = Api()
 server = Server()
 
 myOrg = server.createOrg("ABC Construction")
-Bob = Member("Bob", "Homie")
+Bob = Member("Bob", "Smith")
 Joe = Member("Joe", "Shmo")
 Luna = Member("Luna", "Bird")
 
@@ -18,6 +17,16 @@ myOrg.addMember(Luna)
 
 # Org creates the form
 newForm = myOrg.generateNewForm("sample.pdf", "My Form", "01/01/01")
+
+# Demonstrate creation of pdf document through frontend
+fields = []
+fields.append(pdfElement("First Name", Consts.textFieldDisplay, "", 0, None, True))
+fields.append(pdfElement("Last Name", Consts.textFieldDisplay, "", 1, None, True))
+fields.append(pdfElement("Address", Consts.textFieldDisplay, "", 2, None, True))
+fields.append(pdfElement("$Gender:Male", Consts.mcDisplay, "", 3, None, True))
+fields.append(pdfElement("$Gender:Female", Consts.mcDisplay, "", 4, None, True))
+fields.append(pdfElement("Likes Dogs", Consts.checkBoxDisplay, "", 5, None, True))
+webForm = myOrg.createPdfFromDesktop(fields, "Devin's Form", "02 / 30 / 23")
 
 
 # Org sends the form to all members, Bob Recieves it (Bob)
@@ -32,7 +41,7 @@ Joe.selectForm(myOrg, 0)
 
 #newForm.display() 
 
-Bob.respondToField(0, "Bob Homie")
+Bob.respondToField(0, "Bob Smith")
 Joe.respondToField(0, "Joe Shmo")
 
 Joe.respondToField(1, Consts.checkBoxDisplayYes)
@@ -69,6 +78,7 @@ myOrg.addExisitngResponses()
 
 # Generate excel 
 PdfGenerator.generateExcel(newForm)
+PdfGenerator.generateExcel(webForm)
 
 #TODO: 
 # Fix weird text being hidden

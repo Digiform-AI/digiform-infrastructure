@@ -5,6 +5,7 @@ from pypdf.constants import *
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfform
 from reportlab.lib.colors import magenta, pink, blue, green
+import os
 
 import xlsxwriter
 
@@ -23,23 +24,78 @@ import shutil
 
 class PdfGenerator():
 
-    # Create a pdf from desktop site
-    def createPdf(fields):
-        c = canvas.Canvas('example.pdf')
+    # Create a pdf from desktop site. Given fields with name, type, default value.
+    def createPdf(fields, title, due, org):
+        path = title+".pdf"
+        spacing = 50
+
+
+        c = canvas.Canvas(path)
         c.setFont("Courier", 20)
-        c.drawCentredString(300, 700, 'Form Title')
+        c.drawCentredString(300, 800, title)
 
         c.setFont("Courier", 14)
         form = c.acroForm
 
+        # We need to find how far to the right to place all fields, based on the longest title.
+        max = 0
         for field in fields:
-            ht = 650
+            name = None
+            if field.type == Consts.mcDisplay:
+                name = field.choiceValue
+            else:
+                name = field.name
+            if len(name) > max:
+                max = len(name)
+        # We know the longest string is max. Make x
+        x = max * 11
+  
 
-            if field:
-                c.drawString(10, ht, 'Cat:')
-                form.checkbox(name='cb2', tooltip='Checkbox',
-                x=110, y= ht - 55, buttonStyle='cross',
+
+        ht = 700
+        visitedGroups = []
+        for field in fields[:]:
+            
+            if field.type == Consts.mcDisplay:
+                # Check if group has been visited yet. If not, add title
+                if field.choiceGroup not in visitedGroups:
+                    visitedGroups.append(field.choiceGroup)
+                    c.drawString(x, ht, field.choiceGroup)
+                    ht -= spacing
+                else:
+                    # Bring choices close together
+                    ht+= (spacing/2)
+                
+                c.drawString(10, ht+5, field.choiceValue+": ")
+
+                # Name of field used to be field.choiceValue, this is bad it should be field.name to maintain Group:Choice form!
+                # This display string, above, should stay as field.choiceValue.
+                form.checkbox(name=field.name, tooltip='Multiple Choice',
+                x= x, y= ht, buttonStyle='cross',
                 borderWidth=2, forceBorder=True)
+
+            elif field.type == Consts.checkBoxDisplay:
+                c.drawString(10, ht+5, field.name+": ")
+
+                form.checkbox(name=field.name, tooltip='Checkbox',
+                x= x, y= ht, buttonStyle='cross',
+                borderWidth=2, forceBorder=True)
+
+            elif field.type == Consts.textFieldDisplay:
+                c.drawString(10, ht+15, field.name+": ")
+
+                form.textfield(name=field.name, tooltip='Text',
+                x = x, y= ht, borderStyle='inset',
+                width= (620 - 2*x), forceBorder=True)
+
+            ht -= spacing # Decrease height regardless
+        c.save()
+
+
+        # All fields created, return path to org so they can generate form
+        return PdfGenerator.generateForm(path, title, len(org.forms), due, org)
+        # Handles populating rect property mostly
+
 
 
 
@@ -81,7 +137,7 @@ class PdfGenerator():
             for field in response.fields:
                 if (field.type == Consts.checkBoxDisplay):
 
-                    if (field.value == Consts.checkBoxYesState):
+                    if (field.value in Consts.checkBoxYesState):
                         value = Consts.checkBoxDisplayYes
                     else:
                         value = Consts.checkBoxDisplayNo
@@ -106,7 +162,7 @@ class PdfGenerator():
                                 # This is in our current target group
                                 if (group == g):
                                     # We responded yes to this field for this group
-                                    if (f.value == Consts.checkBoxYesState):
+                                    if (f.value in Consts.checkBoxYesState):
                                         
                                         values.append(v)
                         # We have aquired all the response values for this option in values[].
@@ -173,7 +229,10 @@ class PdfGenerator():
                     pass
 
                 if (r.value == Consts.checkBoxDisplayYes):
-                        r.value = Consts.checkBoxYesState
+                        if r.generated:
+                            r.value = Consts.checkBoxYesState[1]
+                        else: # use /0
+                            r.value = Consts.checkBoxYesState[0]
                 else:
                         r.value = Consts.checkBoxNoState
             # Add to our field dict for fields to be updates
@@ -238,7 +297,12 @@ class PdfGenerator():
     # This function will generate a new form object. It can be thought of as "Starting an Event", and members of the organization
     # are per say "Invited to the event". In this case, that means being sent a "pdfRequest" object - a request to fill in
     # the fields. This form object will be referenced in the code for Organization, when sendRequest(form, client) is called.
+
+    # We also create a directory where input files are uploaded to and stored
     def generateForm(path, title, formID, due, org):
+
+        if not os.path.isdir("input/"+title):
+            os.mkdir("input/"+title)
 
         reader = PdfReader(path)
         
@@ -261,6 +325,7 @@ class PdfGenerator():
                         curFieldValue = ""
                         curFieldIndex = fieldIndex
                         curFieldRect = fieldData["/Rect"]
+                        curFieldGenerated = True
                         try:
                             curFieldName = fieldData["/T"]
                         except: # Key error /T
@@ -272,6 +337,13 @@ class PdfGenerator():
                         except: # Unsupported field type (MC?)
                             # fieldTypeID = "UnsupportedType"
                             continue # Skip this bad data type
+
+                        # Get whether the field came from a generated form by looking for '/TU'
+                        try:
+                            fieldData["/TU"]
+                        except:
+                            # If this fails it was not generated
+                            curFieldGenerated = False
 
                         # Handle check box metadata
                         # Is it a check box or radio button
@@ -287,10 +359,13 @@ class PdfGenerator():
                             except:
                                 # Field is empty!
                                 curFieldValue = ""
+                            
 
 
                             # Readable values to machine values
-                            if (curFieldValue == Consts.checkBoxYesState):
+                            # System created form has /V for yes to be /Yes, no to be /Off.
+                            # Adobe forms has yes to be /0, and no to be /On. So we fix this by making an array of Consts
+                            if (curFieldValue in Consts.checkBoxYesState):
                                 curFieldValue = Consts.checkBoxDisplayYes
                             else:
                                 curFieldValue = Consts.checkBoxDisplayNo
@@ -305,7 +380,7 @@ class PdfGenerator():
                                 curFieldValue = ""
 
                         # Append this field to our list
-                        curField = pdfElement(curFieldName, curFieldType, curFieldValue, curFieldIndex, curFieldRect)
+                        curField = pdfElement(curFieldName, curFieldType, curFieldValue, curFieldIndex, curFieldRect, curFieldGenerated)
                         myFields.append(curField)
                         fieldIndex = fieldIndex + 1
 

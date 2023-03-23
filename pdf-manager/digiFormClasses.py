@@ -109,7 +109,7 @@ class Member:
             if ((response.type == Consts.mcDisplay) and (response.singleChoice == True)):
                 
                 # It is! Set them all to no, then this one to yes, if we're choosing yes
-                if (response.value == Consts.checkBoxDisplayYes or response.value == Consts.checkBoxYesState):
+                if (response.value == Consts.checkBoxDisplayYes or response.value in Consts.checkBoxYesState):
                     
                     # We said yes to this, so first say no to all others.
                     for field in self.currentForm.fields:
@@ -161,6 +161,14 @@ class Organization:
     def setCurrentForm(self, id):
         self.currentForm = self.forms[id]
 
+    # Create pdf from desktop site using json data
+    def createPdfFromDesktop(self, fields, title, due):
+        newForm = PdfGenerator.createPdf(fields, title, due, self)
+        self.forms.append(newForm) # Add the new form
+        return newForm
+
+        
+
     # Organization wants to create a new form using the button. 
     # It must be given a new formID, the number of created forms.
     # returns the form object
@@ -182,7 +190,7 @@ class Organization:
             # Not iterable (singleton)
             fields = []
             for field in form.fields[:]:
-                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect)
+                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect, field.generated)
                 fields.append(newField)
 
             newReq = pdfRequest(form.name, form.due, self, fields, form.formID)
@@ -193,7 +201,7 @@ class Organization:
             # Create the request and call recieve in member
             fields = []
             for field in form.fields[:]:
-                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect)
+                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect, field.generated)
                 fields.append(newField)
                 
             newReq = pdfRequest(form.name, form.due, self, fields, form.formID)
@@ -244,98 +252,112 @@ class Organization:
     # We have a reference to the current form, where we can gather most fields.
 
     def addExisitngResponses(self):
-        for file in os.listdir("input"):
-            matches = [] # Each file will have a new member list, found below:
-            member = None
-            firstName = ""
-            lastName = ""
+        # For each form look for a folder of its name
+        for form in self.forms:
+            # Set currentForm so we add responses to the correct form folder
+            self.currentForm = form
+            title = form.name
+    
+            # Must only continue if responses in input/title/
 
-            if file.endswith(".pdf"):
-                path = os.path.join("input", file)
-                # First we must convert to a response object
-                # I will first gather the fields by converting to form object
-                complete = PdfGenerator.generateForm(path, self.currentForm.name, self.currentForm.formID, self.currentForm.due, self.currentForm.org)
-                # I will now use complete.fields to gather the person who responded.
+            # If this file has an input folder: NOTE: If it doesnt, was it deleted? One should be made when the form is created
+            if os.path.isdir("input/"+title):
 
-                
-                
-                for field in complete.fields:
-                    # Field says firstname, so store the first name
-                    if field.name in Consts.firstNameFields:
-                        firstName = field.value.capitalize()
+                for file in os.listdir("input/"+title):
+                    matches = [] # Each file will have a new member list, found below:
+                    member = None
+                    firstName = ""
+                    lastName = ""
 
-                    # Field says name so its probably first and last
-                    if field.name in Consts.nameFields:
-                        splitName = field.value.split(" ")
+                    if file.endswith(".pdf"):
+                        path = os.path.join("input/"+title, file)
+                        # First we must convert to a response object
+                        # I will first gather the fields by converting to form object
+                        complete = PdfGenerator.generateForm(path, self.currentForm.name, self.currentForm.formID, self.currentForm.due, self.currentForm.org)
+                        # I will now use complete.fields to gather the person who responded.
+
                         
-                        # Store first and maybe last name
-                        firstName = splitName[0].capitalize()
-                        if len(splitName) == 2:
-                            lastName = splitName[1].capitalize()
-
-                     # We are given last name so store last name
-                    if field.name in Consts.lastNameFields:
-                        lastName = field.value.capitalize()
-
-                    """ We have all possible info about the name, now try to find the member(s) matching the criteria """
-                    if lastName:
-                        # We have a last name so find all members with the last name AND first because we will always have first
-                        for m in self.members:
-                            if (m.lastName == lastName):
-                                # Now check first name
-                                if (m.firstName == firstName):
-                                    matches.append(m)
-                        # Here our matches must have at least one because we had a last name given.
-                        # If we don't have any matches, it may be because last name not stored in system.
-                        """ Widen search to just look for first names since we found none with last name"""
-                        if len(matches) == 0:
-                            for m in self.members:
-                                if (m.firstName == firstName):
-                                    matches.append(m)
-
-                    # Try just searching first names if we got no matches
-                    else: # We only have first name data
-                        for m in self.members:
-                            if (m.firstName == firstName):
-                                matches.append(m)
-
-                    """ We're ready to parse results. If one is found, perfect! it is our member. """
-                    if len(matches) == 1:
-                        member = matches[0]
-                    
-                    """ We're finished gathering results. If multiple, show UI to select or create new. """
-                    if len(matches) == 0: # No matches found! Must select from all, or add new!
-                        print(firstName + " "+ lastName +" was not a member so we have added them. This should prompt org, not just do it by auto!")
-                        member = Member(firstName, lastName)
-                        self.members.append(member)
-
-                    # If we have multiple members with this name, present UI to choose which one
-                    elif (len(matches) > 1):
-                        #TODO: UI will determine which member (auto - detect halts)
-                        # When response comes, we continue
-                        # NOTE: at this point, member is set to the first occurance of the member that we found w this name
-                        print("Multiple members found with name "+firstName+" "+lastName+"! Add UI to prompt which one in digiFormClasses.addExistingResponse().")
-                    # Here we successfully have set the value of member (after UI prompt)
-
-
-                    break # We already found the member so no need to keep looking
-
-
-                if (member == None):
-                    # We failed to set the member because we could not find the name!
-                    # TODO: Present UI with option to select member from list where we can search for a member,
-                    # OR we have option to add a new member as a button at the bottom of the widget.
-                    print("No field 'name' found! Add UI to prompt member selection / addition in digiFormClasses.addExistingResponse().")
-                    return # FOR NOW WE FAIL TO ADD THIS FORM UNTIL WE LEARN HOW TO CHOOSE MEMBER FROM UI AS ABOVE
-                # Member is found!
                         
-                # Gather time of last modification
-                ti_m = os.path.getmtime(path)
-                m_ti = time.ctime(ti_m)
+                        for field in complete.fields:
+                            # Field says firstname, so store the first name
+                            if field.name in Consts.firstNameFields:
+                                firstName = field.value.capitalize()
 
-                # Create and add the complete response to the array of responses
-                response = pdfResponse(member, m_ti, complete.fields, self.currentForm.formID, self.currentForm.org)
-                self.currentForm.responses.append(response) 
+                            # Field says name so its probably first and last
+                            if field.name in Consts.nameFields:
+                                splitName = field.value.split(" ")
+                                
+                                # Store first and maybe last name
+                                firstName = splitName[0].capitalize()
+                                if len(splitName) == 2:
+                                    lastName = splitName[1].capitalize()
 
-                # Add the form file to folder of complete PDF documents
-                self.saveResponseAsPdf(response)
+                            # We are given last name so store last name
+                            if field.name in Consts.lastNameFields:
+                                lastName = field.value.capitalize()
+
+                            """ We have all possible info about the name, now try to find the member(s) matching the criteria """
+                            if lastName:
+                                # We have a last name so find all members with the last name AND first because we will always have first
+                                for m in self.members:
+                                    if (m.lastName == lastName):
+                                        # Now check first name
+                                        if (m.firstName == firstName):
+                                            matches.append(m)
+                                # Here our matches must have at least one because we had a last name given.
+                                # If we don't have any matches, it may be because last name not stored in system.
+                                """ Widen search to just look for first names since we found none with last name"""
+                                if len(matches) == 0:
+                                    for m in self.members:
+                                        if (m.firstName == firstName):
+                                            matches.append(m)
+
+                            # Try just searching first names if we got no matches
+                            else: # We only have first name data
+                                for m in self.members:
+                                    if (m.firstName == firstName):
+                                        matches.append(m)
+
+                            """ We're ready to parse results. If one is found, perfect! it is our member. """
+                            if len(matches) == 1:
+                                member = matches[0]
+                            
+                            """ We're finished gathering results. If multiple, show UI to select or create new. """
+                            if len(matches) == 0: # No matches found! Must select from all, or add new!
+                                print(firstName + " "+ lastName +" was not a member so we have added them. This should prompt org, not just do it by auto!")
+                                member = Member(firstName, lastName)
+                                self.members.append(member)
+
+                            # If we have multiple members with this name, present UI to choose which one
+                            elif (len(matches) > 1):
+                                #TODO: UI will determine which member (auto - detect halts)
+                                # When response comes, we continue
+                                # NOTE: at this point, member is set to the first occurance of the member that we found w this name
+                                print("Multiple members found with name "+firstName+" "+lastName+"! Add UI to prompt which one in digiFormClasses.addExistingResponse().")
+                            # Here we successfully have set the value of member (after UI prompt)
+
+
+                            break # We already found the member so no need to keep looking
+
+
+                        if (member == None):
+                            # We failed to set the member because we could not find the name!
+                            # TODO: Present UI with option to select member from list where we can search for a member,
+                            # OR we have option to add a new member as a button at the bottom of the widget.
+                            print("No field 'name' found! Add UI to prompt member selection / addition in digiFormClasses.addExistingResponse().")
+                            return # FOR NOW WE FAIL TO ADD THIS FORM UNTIL WE LEARN HOW TO CHOOSE MEMBER FROM UI AS ABOVE
+                        # Member is found!
+                                
+                        # Gather time of last modification
+                        ti_m = os.path.getmtime(path)
+                        m_ti = time.ctime(ti_m)
+
+                        # Create and add the complete response to the array of responses
+                        response = pdfResponse(member, m_ti, complete.fields, self.currentForm.formID, self.currentForm.org)
+                        self.currentForm.responses.append(response) 
+
+                        # Add the form file to folder of complete PDF documents
+                        self.saveResponseAsPdf(response)
+            else:
+                # Make the directory because it mustve been deleted
+                os.mkdir("input/"+title)
