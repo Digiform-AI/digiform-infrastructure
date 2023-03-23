@@ -165,6 +165,7 @@ class Organization:
     def createPdfFromDesktop(self, fields, title, due):
         newForm = PdfGenerator.createPdf(fields, title, due, self)
         self.forms.append(newForm) # Add the new form
+        return newForm
 
         
 

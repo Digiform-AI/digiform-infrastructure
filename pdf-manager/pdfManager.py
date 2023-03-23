@@ -135,7 +135,7 @@ class PdfGenerator():
             for field in response.fields:
                 if (field.type == Consts.checkBoxDisplay):
 
-                    if (field.value == Consts.checkBoxYesState):
+                    if (field.value in Consts.checkBoxYesState):
                         value = Consts.checkBoxDisplayYes
                     else:
                         value = Consts.checkBoxDisplayNo
@@ -160,7 +160,7 @@ class PdfGenerator():
                                 # This is in our current target group
                                 if (group == g):
                                     # We responded yes to this field for this group
-                                    if (f.value == Consts.checkBoxYesState):
+                                    if (f.value in Consts.checkBoxYesState):
                                         
                                         values.append(v)
                         # We have aquired all the response values for this option in values[].

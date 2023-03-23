@@ -26,7 +26,7 @@ fields.append(pdfElement("Address", Consts.textFieldDisplay, "", 2, None, True))
 fields.append(pdfElement("$Gender:Male", Consts.mcDisplay, "", 3, None, True))
 fields.append(pdfElement("$Gender:Female", Consts.mcDisplay, "", 4, None, True))
 fields.append(pdfElement("Likes Dogs", Consts.checkBoxDisplay, "", 5, None, True))
-myOrg.createPdfFromDesktop(fields, "Devin's Form", "02 / 30 / 23")
+webForm = myOrg.createPdfFromDesktop(fields, "Devin's Form", "02 / 30 / 23")
 
 
 # Org sends the form to all members, Bob Recieves it (Bob)
@@ -78,6 +78,7 @@ myOrg.addExisitngResponses()
 
 # Generate excel 
 PdfGenerator.generateExcel(newForm)
+PdfGenerator.generateExcel(webForm)
 
 #TODO: 
 # Fix weird text being hidden
