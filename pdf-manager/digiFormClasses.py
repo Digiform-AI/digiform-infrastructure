@@ -254,10 +254,13 @@ class Organization:
     def addExisitngResponses(self):
         # For each form look for a folder of its name
         for form in self.forms:
+            # Set currentForm so we add responses to the correct form folder
+            self.currentForm = form
             title = form.name
-            self.currentForm = form # set curform so we save to correct folder and gather correct raw form
+    
             # Must only continue if responses in input/title/
 
+            # If this file has an input folder: NOTE: If it doesnt, was it deleted? One should be made when the form is created
             if os.path.isdir("input/"+title):
 
                 for file in os.listdir("input/"+title):
@@ -356,4 +359,5 @@ class Organization:
                         # Add the form file to folder of complete PDF documents
                         self.saveResponseAsPdf(response)
             else:
+                # Make the directory because it mustve been deleted
                 os.mkdir("input/"+title)

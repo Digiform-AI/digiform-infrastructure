@@ -19,13 +19,13 @@ def lambda_handler(event, context):
 
     try:
         cursor = connection.cursor()
-
-        cursor.execute("SELECT * FROM Users u WHERE u.email = '{event.email}'")
+        cursor.execute("SELECT u.first_name, u.last_name, u.email, d.document_name, d.document_path, a.assigned_date FROM Users u INNER JOIN AssignedDocuments a on u.user_id = a.assigned_to INNER JOIN Documents d on a.document_assigned = d.document_id WHERE u.email = '{}'".format(event['email']))
         results = cursor.fetchall()
         cursor.close()
         connection.commit()
 
         return {
+            'Access-Control-Allow-Origin': '*',
             'statusCode': 200,
             'body':str(results) 
         }

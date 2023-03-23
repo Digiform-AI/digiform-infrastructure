@@ -26,6 +26,7 @@ def lambda_handler(event, context):
         connection.commit()
 
         return {
+            'Access-Control-Allow-Origin': '*',
             'statusCode': 200,
             'body':str(results) 
         }
