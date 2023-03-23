@@ -73,7 +73,6 @@ class Api:
     def getForm(id):
         form = None
         for f in Api.myMember.activeForms:
-            print(id)
             if f.formID == int(id):
                 form = f
                 break
@@ -109,7 +108,10 @@ class Api:
     
     
     def __init__(self):
-        self.app.run(debug=True, port= 5000)
+        
+        {
+            #self.app.run(debug=True, port= 5000)
+        }
 
 Api()
 
