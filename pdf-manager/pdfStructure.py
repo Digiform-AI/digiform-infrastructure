@@ -49,7 +49,7 @@ class pdfResponse:
         self.formID = formID
     
 class pdfForm:
-    def __init__(self, name, formID, due, org, fields, path):
+    def __init__(self, name, formID, due, org, fields, path, pageHeights):
 
         # Fields determined by server (on creation)
         self.name = name
@@ -57,6 +57,7 @@ class pdfForm:
         self.org = org
         self.fields = fields
         self.path = path
+        self.pageHeights = pageHeights
 
         # No responses by default, of course
         # The FormID is used to connect responses to the correct form.

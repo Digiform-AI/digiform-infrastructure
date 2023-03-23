@@ -309,10 +309,14 @@ class PdfGenerator():
     
         myFields = []
         fieldIndex = 0
+        pageHeights = []
 
 
         for page in reader.pages:
             if "/Annots" in page:
+                # Store the heights so we can flip the orientation on Textract coordinate mapping (to top-to-bottom)
+                pageHeights.append(page.mediabox.height)
+
                 for annot in page["/Annots"]:
       
                     fieldData = annot.get_object()
@@ -384,4 +388,4 @@ class PdfGenerator():
                         myFields.append(curField)
                         fieldIndex = fieldIndex + 1
 
-        return pdfForm(title, formID, due, org, myFields, path)
+        return pdfForm(title, formID, due, org, myFields, path, pageHeights)
