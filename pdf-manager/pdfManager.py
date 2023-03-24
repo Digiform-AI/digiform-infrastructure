@@ -5,7 +5,7 @@ from pypdf.constants import *
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfform
 from reportlab.lib.colors import magenta, pink, blue, green
-import os
+import os, io
 
 import xlsxwriter
 
@@ -71,22 +71,19 @@ class PdfGenerator():
                 # Name of field used to be field.choiceValue, this is bad it should be field.name to maintain Group:Choice form!
                 # This display string, above, should stay as field.choiceValue.
                 form.checkbox(name=field.name, tooltip='Multiple Choice',
-                x= x, y= ht, buttonStyle='cross',
-                borderWidth=2, forceBorder=True)
+                x= x, y= ht, buttonStyle='cross')
 
             elif field.type == Consts.checkBoxDisplay:
                 c.drawString(10, ht+5, field.name+": ")
 
                 form.checkbox(name=field.name, tooltip='Checkbox',
-                x= x, y= ht, buttonStyle='cross',
-                borderWidth=2, forceBorder=True)
+                x= x, y= ht, buttonStyle='cross')
 
             elif field.type == Consts.textFieldDisplay:
                 c.drawString(10, ht+15, field.name+": ")
 
                 form.textfield(name=field.name, tooltip='Text',
-                x = x, y= ht, borderStyle='inset',
-                width= (620 - 2*x), forceBorder=True)
+                x = x, y= ht, width= (620 - 2*x))
 
             ht -= spacing # Decrease height regardless
         c.save()
@@ -389,3 +386,32 @@ class PdfGenerator():
                         fieldIndex = fieldIndex + 1
 
         return pdfForm(title, formID, due, org, myFields, path)
+
+    # Creates borders around the text to tell user where to write responses
+    # Must be called from the print button to print this form (path returned)
+    def printForm(form):
+        newPath = form.path.replace(".pdf", "-print.pdf")
+        shutil.copy(form.path, newPath) # Create a copy to put the boxes onto
+
+        packet = io.BytesIO()
+        can = canvas.Canvas(packet)
+
+        for field in form.fields:
+            can.rect(field.rect[0], field.rect[1], field.rect[2] - field.rect[0], field.rect[3] - field.rect[1])
+        can.save()
+
+        packet.seek(0)
+        new_pdf = PdfReader(packet)
+        existing_pdf = PdfReader(open(newPath, "rb"))
+        output = PdfWriter()
+
+        for i in range(len(existing_pdf.pages)):
+            page = existing_pdf.pages[i]
+            page.merge_page(new_pdf.pages[i])
+            output.add_page(page)
+
+        outputStream = open(newPath, "wb")
+        output.write(outputStream)
+        outputStream.close()
+
+        return newPath

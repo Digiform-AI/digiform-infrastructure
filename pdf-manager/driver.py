@@ -28,6 +28,9 @@ fields.append(pdfElement("$Gender:Female", Consts.mcDisplay, "", 4, None, True, 
 fields.append(pdfElement("Likes Dogs", Consts.checkBoxDisplay, "", 5, None, True, None))
 webForm = myOrg.createPdfFromDesktop(fields, "Devin's Form", "02 / 30 / 23")
 
+PdfGenerator.printForm(newForm)
+PdfGenerator.printForm(webForm)
+
 
 # Org sends the form to all members, Bob Recieves it (Bob)
 myOrg.sendFormRequest(newForm, myOrg.members)
