@@ -49,7 +49,7 @@ class pdfResponse:
         self.formID = formID
     
 class pdfForm:
-    def __init__(self, name, formID, due, org, fields, path, pageHeights):
+    def __init__(self, name, formID, due, org, fields, path):
 
         # Fields determined by server (on creation)
         self.name = name
@@ -57,7 +57,6 @@ class pdfForm:
         self.org = org
         self.fields = fields
         self.path = path
-        self.pageHeights = pageHeights
 
         # No responses by default, of course
         # The FormID is used to connect responses to the correct form.
@@ -75,13 +74,14 @@ class pdfForm:
 
 # A readible struct. We create when a user updates a value for a field 
 class pdfElement:
-    def __init__(self, name, type, value, index, rect, generated):
+    def __init__(self, name, type, value, index, rect, generated, pageHeight):
         self.name = name
         self.type = type
         self.value = value
         self.index = index
         self.rect = rect
         self.generated = generated
+        self.pageHeight = pageHeight
         
         # Multiple choice properties
         self.singleChoice = False

@@ -20,12 +20,12 @@ newForm = myOrg.generateNewForm("sample.pdf", "My Form", "01/01/01")
 
 # Demonstrate creation of pdf document through frontend
 fields = []
-fields.append(pdfElement("First Name", Consts.textFieldDisplay, "", 0, None, True))
-fields.append(pdfElement("Last Name", Consts.textFieldDisplay, "", 1, None, True))
-fields.append(pdfElement("Address", Consts.textFieldDisplay, "", 2, None, True))
-fields.append(pdfElement("$Gender:Male", Consts.mcDisplay, "", 3, None, True))
-fields.append(pdfElement("$Gender:Female", Consts.mcDisplay, "", 4, None, True))
-fields.append(pdfElement("Likes Dogs", Consts.checkBoxDisplay, "", 5, None, True))
+fields.append(pdfElement("First Name", Consts.textFieldDisplay, "", 0, None, True, None))
+fields.append(pdfElement("Last Name", Consts.textFieldDisplay, "", 1, None, True, None))
+fields.append(pdfElement("Address", Consts.textFieldDisplay, "", 2, None, True, None))
+fields.append(pdfElement("$Gender:Male", Consts.mcDisplay, "", 3, None, True, None))
+fields.append(pdfElement("$Gender:Female", Consts.mcDisplay, "", 4, None, True, None))
+fields.append(pdfElement("Likes Dogs", Consts.checkBoxDisplay, "", 5, None, True, None))
 webForm = myOrg.createPdfFromDesktop(fields, "Devin's Form", "02 / 30 / 23")
 
 
