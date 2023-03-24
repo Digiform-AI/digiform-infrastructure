@@ -94,7 +94,7 @@ class PdfGenerator():
 
         # All fields created, return path to org so they can generate form
         return PdfGenerator.generateForm(path, title, len(org.forms), due, org)
-        # Handles populating rect property mostly
+        # Handles populating rect and page height properties mostly
 
 
 
@@ -309,13 +309,12 @@ class PdfGenerator():
     
         myFields = []
         fieldIndex = 0
-        pageHeights = []
 
 
         for page in reader.pages:
             if "/Annots" in page:
                 # Store the heights so we can flip the orientation on Textract coordinate mapping (to top-to-bottom)
-                pageHeights.append(page.mediabox.height)
+                
 
                 for annot in page["/Annots"]:
       
@@ -330,6 +329,7 @@ class PdfGenerator():
                         curFieldIndex = fieldIndex
                         curFieldRect = fieldData["/Rect"]
                         curFieldGenerated = True
+                        curFieldPageHeight = page.mediabox.height
                         try:
                             curFieldName = fieldData["/T"]
                         except: # Key error /T
@@ -384,8 +384,8 @@ class PdfGenerator():
                                 curFieldValue = ""
 
                         # Append this field to our list
-                        curField = pdfElement(curFieldName, curFieldType, curFieldValue, curFieldIndex, curFieldRect, curFieldGenerated)
+                        curField = pdfElement(curFieldName, curFieldType, curFieldValue, curFieldIndex, curFieldRect, curFieldGenerated, curFieldPageHeight)
                         myFields.append(curField)
                         fieldIndex = fieldIndex + 1
 
-        return pdfForm(title, formID, due, org, myFields, path, pageHeights)
+        return pdfForm(title, formID, due, org, myFields, path)

@@ -190,7 +190,7 @@ class Organization:
             # Not iterable (singleton)
             fields = []
             for field in form.fields[:]:
-                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect, field.generated)
+                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect, field.generated, field.pageHeight)
                 fields.append(newField)
 
             newReq = pdfRequest(form.name, form.due, self, fields, form.formID)
@@ -201,7 +201,7 @@ class Organization:
             # Create the request and call recieve in member
             fields = []
             for field in form.fields[:]:
-                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect, field.generated)
+                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect, field.generated, field.pageHeight)
                 fields.append(newField)
                 
             newReq = pdfRequest(form.name, form.due, self, fields, form.formID)

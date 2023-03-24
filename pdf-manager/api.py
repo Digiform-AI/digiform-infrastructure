@@ -15,15 +15,13 @@ class Api:
     myOrg.sendFormRequest(newForm, myMember)
     myMember.selectForm(myOrg, 0) # Select this form for updates
 
-    # Member submits the currently selected form
+    # Member submits the form they are currently editing
     @app.route('/submitForm/', methods = ['GET','POST'])
     def submitCurrentForm():
         res = request.body
         for key in res.keys():
             value = res[key]["value"] # Dictionary of field name : field value, looking for key "value"
             Api.myMember.respondToField(int(key), value) # Respond to each field
-
-
 
         Api.myMember.submitFormResponse()
         return "Submitted "+Api.myMember.currentForm.name
@@ -86,6 +84,7 @@ class Api:
                          "organizer": form.org.name}}
 
             # Now add the fields
+            # NOTE: I included the height of the containing page for coordinate localization.
             fields = {}
             for field in form.fields:
                 fields.update( 
@@ -95,6 +94,7 @@ class Api:
                       "type": field.type, 
                       "value": field.value,
                       "rect": field.rect,
+                      "pageHeight": field.pageHeight,
 
                       "singleSelectionOnly": field.singleChoice,
                       "groupName": field.choiceGroup,
