@@ -9,6 +9,7 @@ import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
 import { Cors } from 'aws-cdk-lib/aws-apigateway';
+import { Peer, Port } from 'aws-cdk-lib/aws-ec2';
 
 
 export class DigiformStack extends cdk.Stack {
@@ -51,24 +52,24 @@ export class DigiformStack extends cdk.Stack {
 			vpc,
 		});
 
+		dbSecurityGroup.addEgressRule(Peer.anyIpv4(), Port.allTraffic())
+		dbSecurityGroup.addIngressRule(Peer.anyIpv4(), Port.allTraffic())
+
 		const databaseName = 'digiformDatabase';
 		const dbInstance = new rds.DatabaseInstance(this, 'Instance', {
 			engine: rds.DatabaseInstanceEngine.postgres({
 				version: rds.PostgresEngineVersion.VER_13,
 			}),
-			// optional, defaults to m5.large
 			instanceType: ec2.InstanceType.of(
 				ec2.InstanceClass.BURSTABLE3,
 				ec2.InstanceSize.SMALL
 			),
 			vpc,
-			vpcSubnets: vpc.selectSubnets({
-				subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-			}),
 			databaseName,
 			securityGroups: [dbSecurityGroup],
+			publiclyAccessible:true,
 			credentials: rds.Credentials.fromGeneratedSecret('postgres'), // Generates usr/pw in secrets manager
-			maxAllocatedStorage: 200, // Storage for DB in GB
+			maxAllocatedStorage: 100, // Storage for DB in GB
 		});
 
 		// create the RDS Proxy and add the database instance as the proxy target.
@@ -78,9 +79,6 @@ export class DigiformStack extends cdk.Stack {
 			securityGroups: [dbSecurityGroup],
 			vpc,
 			requireTLS: false,
-			vpcSubnets: vpc.selectSubnets({
-			  subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-			}),
 		});
 
 		/*
@@ -115,9 +113,6 @@ export class DigiformStack extends cdk.Stack {
 			},
 			timeout: Duration.minutes(5), 
 			vpc,
-			vpcSubnets: vpc.selectSubnets({
-			  subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-			}),
 			securityGroups: [lambdaSG],
 		});
 
@@ -136,9 +131,6 @@ export class DigiformStack extends cdk.Stack {
 			},
 			timeout: Duration.minutes(5), 
 			vpc,
-			vpcSubnets: vpc.selectSubnets({
-			  subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-			}),
 			securityGroups: [lambdaSG],
 		});
 
@@ -157,9 +149,6 @@ export class DigiformStack extends cdk.Stack {
 			},
 			timeout: Duration.minutes(5), 
 			vpc,
-			vpcSubnets: vpc.selectSubnets({
-			  subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-			}),
 			securityGroups: [lambdaSG],
 		});
 
@@ -179,9 +168,6 @@ export class DigiformStack extends cdk.Stack {
 			},
 			timeout: Duration.minutes(5), 
 			vpc,
-			vpcSubnets: vpc.selectSubnets({
-			  subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-			}),
 			securityGroups: [lambdaSG],
 		});
 
@@ -200,9 +186,6 @@ export class DigiformStack extends cdk.Stack {
 			},
 			timeout: Duration.minutes(5), 
 			vpc,
-			vpcSubnets: vpc.selectSubnets({
-			  subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-			}),
 			securityGroups: [lambdaSG],
 		});
 
@@ -221,9 +204,6 @@ export class DigiformStack extends cdk.Stack {
 			},
 			timeout: Duration.minutes(5), 
 			vpc,
-			vpcSubnets: vpc.selectSubnets({
-			  subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-			}),
 			securityGroups: [lambdaSG],
 		});
 
