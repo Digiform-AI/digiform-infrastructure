@@ -92,3 +92,4 @@ PdfGenerator.generateExcel(webForm)
 # Fix the name function
 
 
+# NOTE: Checkboxes are correctly ticked in input/MyForm, they just aren't in responses/MyForm, so it has to be a matter of semantics with /0
