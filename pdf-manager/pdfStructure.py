@@ -74,7 +74,7 @@ class pdfForm:
 
 # A readible struct. We create when a user updates a value for a field 
 class pdfElement:
-    def __init__(self, name, type, value, index, rect, generated, pageHeight):
+    def __init__(self, name, type, value, index, rect, generated, pageHeight, pageWidth, pageIndex):
         self.name = name
         self.type = type
         self.value = value
@@ -82,6 +82,8 @@ class pdfElement:
         self.rect = rect
         self.generated = generated
         self.pageHeight = pageHeight
+        self.pageWidth = pageWidth
+        self.pageIndex = pageIndex
         
         # Multiple choice properties
         self.singleChoice = False

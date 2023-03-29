@@ -306,9 +306,11 @@ class PdfGenerator():
     
         myFields = []
         fieldIndex = 0
+        curFieldPage = 0
 
 
         for page in reader.pages:
+            
             if "/Annots" in page:
                 # Store the heights so we can flip the orientation on Textract coordinate mapping (to top-to-bottom)
                 
@@ -320,13 +322,14 @@ class PdfGenerator():
                     #print("\n")
                     if (fieldData["/Subtype"] == "/Widget"):
                         
-
+                        
                         curFieldType = ""
                         curFieldValue = ""
                         curFieldIndex = fieldIndex
                         curFieldRect = fieldData["/Rect"]
                         curFieldGenerated = True
                         curFieldPageHeight = page.mediabox.height
+                        curFieldPageWidth = page.mediabox.width
                         try:
                             curFieldName = fieldData["/T"]
                         except: # Key error /T
@@ -381,30 +384,50 @@ class PdfGenerator():
                                 curFieldValue = ""
 
                         # Append this field to our list
-                        curField = pdfElement(curFieldName, curFieldType, curFieldValue, curFieldIndex, curFieldRect, curFieldGenerated, curFieldPageHeight)
+                        curField = pdfElement(curFieldName, curFieldType, curFieldValue, curFieldIndex, curFieldRect, curFieldGenerated, curFieldPageHeight, curFieldPageWidth, curFieldPage)
                         myFields.append(curField)
                         fieldIndex = fieldIndex + 1
+            curFieldPage+=1
 
         return pdfForm(title, formID, due, org, myFields, path)
 
     # Creates borders around the text to tell user where to write responses
+    # Also creates a border on the outside of the document so we know where to crop after the scan
     # Must be called from the print button to print this form (path returned)
     def printForm(form):
         newPath = form.path.replace(".pdf", "-print.pdf")
         shutil.copy(form.path, newPath) # Create a copy to put the boxes onto
-
+        
+        # Set up a new blank file to draw rectangles on
         packet = io.BytesIO()
         can = canvas.Canvas(packet)
 
-        for field in form.fields:
-            can.rect(field.rect[0], field.rect[1], field.rect[2] - field.rect[0], field.rect[3] - field.rect[1])
-        can.save()
+        existing_pdf = PdfReader(open(newPath, "rb")) # Store the existing pdf, the copy which we will overlay the boxes to
+        output = PdfWriter() # designate a file for the final output
 
-        packet.seek(0)
-        new_pdf = PdfReader(packet)
-        existing_pdf = PdfReader(open(newPath, "rb"))
-        output = PdfWriter()
+        
+        # For each page, generate a page on a new buffer of just boxes. Later, we overlay the two.
+        for i in range(len(existing_pdf.pages)):
+            w, h = 0, 0
+            
+            # Make each border for a field on this page, only
+            for field in form.fields:
+                if field.pageIndex == i: # Make sure this field is on this page!
+                    can.rect(field.rect[0], field.rect[1], field.rect[2] - field.rect[0], field.rect[3] - field.rect[1])
+                    w, h = field.pageWidth, field.pageHeight # Save this page's width and height to draw a surround box
 
+            # Make border around entire page (for cropping), independent of print margin settings
+            can.rect(0,0,w,h)
+
+            can.showPage() # end the page
+            
+            packet.seek(0)
+            
+            
+        can.save() # save the pdf
+        new_pdf = PdfReader(packet) # Store the pdf containing only rectangles
+
+        # Merge all pages together
         for i in range(len(existing_pdf.pages)):
             page = existing_pdf.pages[i]
             page.merge_page(new_pdf.pages[i])

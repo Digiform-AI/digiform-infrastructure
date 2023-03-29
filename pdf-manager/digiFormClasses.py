@@ -33,7 +33,15 @@ class Member:
             if ((req.org == org) and (req.formID == formID)):
                 # This requests matches our selection (org and ID match) so we already started it
                 self.currentForm = req
+                
                 return self.currentForm
+
+            # id 2 is what i want. form id is org based, so our request are only id 0, single form, and id 2, multi form.
+            # id 1 is reserved for the web generated form (devin's form).
+
+
+        print(self.firstName+ " could not select form ID "+str(formID)+". They were not sent this form! Do you have the wrong formID?")
+        print("    - The org of form @ id "+str(formID)+" is "+self.activeForms[formID].org.name+" .")
 
     # This member has been sent a form to complete, this is the request object
     def receiveFormRequest(self, req):
@@ -128,7 +136,7 @@ class Member:
         for field in fields:
             if (field.index == index):
                 return field
-        print("ERROR")
+        print("ERROR finding index "+ str(index)+" in form "+ self.currentForm.name+" (id: "+str(self.currentForm.formID)+").")
         return None # Error field not here! Every field in the form shold be copied!
     
 
@@ -190,7 +198,7 @@ class Organization:
             # Not iterable (singleton)
             fields = []
             for field in form.fields[:]:
-                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect, field.generated, field.pageHeight)
+                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect, field.generated, field.pageHeight, field.pageWidth, field.pageIndex)
                 fields.append(newField)
 
             newReq = pdfRequest(form.name, form.due, self, fields, form.formID)
@@ -201,7 +209,7 @@ class Organization:
             # Create the request and call recieve in member
             fields = []
             for field in form.fields[:]:
-                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect, field.generated, field.pageHeight)
+                newField = pdfElement(field.name, field.type, field.value, field.index, field.rect, field.generated, field.pageHeight, field.pageWidth, field.pageIndex)
                 fields.append(newField)
                 
             newReq = pdfRequest(form.name, form.due, self, fields, form.formID)

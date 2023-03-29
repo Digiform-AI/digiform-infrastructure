@@ -20,25 +20,32 @@ newForm = myOrg.generateNewForm("sample.pdf", "My Form", "01/01/01")
 
 # Demonstrate creation of pdf document through frontend
 fields = []
-fields.append(pdfElement("First Name", Consts.textFieldDisplay, "", 0, None, True, None))
-fields.append(pdfElement("Last Name", Consts.textFieldDisplay, "", 1, None, True, None))
-fields.append(pdfElement("Address", Consts.textFieldDisplay, "", 2, None, True, None))
-fields.append(pdfElement("$Gender:Male", Consts.mcDisplay, "", 3, None, True, None))
-fields.append(pdfElement("$Gender:Female", Consts.mcDisplay, "", 4, None, True, None))
-fields.append(pdfElement("Likes Dogs", Consts.checkBoxDisplay, "", 5, None, True, None))
+fields.append(pdfElement("First Name", Consts.textFieldDisplay, "", 0, None, True, None, None, 0))
+fields.append(pdfElement("Last Name", Consts.textFieldDisplay, "", 1, None, True, None, None, 0))
+fields.append(pdfElement("Address", Consts.textFieldDisplay, "", 2, None, True, None, None, 0))
+fields.append(pdfElement("$Gender:Male", Consts.mcDisplay, "", 3, None, True, None, None, 0))
+fields.append(pdfElement("$Gender:Female", Consts.mcDisplay, "", 4, None, True, None, None, 0))
+fields.append(pdfElement("Likes Dogs", Consts.checkBoxDisplay, "", 5, None, True, None, None, 0))
 webForm = myOrg.createPdfFromDesktop(fields, "Devin's Form", "02 / 30 / 23")
+# cleans up page number, page height, rect objects and what not in pdf manager
 
 PdfGenerator.printForm(newForm)
 PdfGenerator.printForm(webForm)
 
+# Test field outlining in a multi page form
+multiForm = myOrg.generateNewForm("sample2page.pdf", "Multipage Form", "06/09/04")
+PdfGenerator.printForm(multiForm)
 
-# Org sends the form to all members, Bob Recieves it (Bob)
+
+# Org sends the single page and double page form to all members, Bob, Luna, Joe Recieves it
 myOrg.sendFormRequest(newForm, myOrg.members)
+myOrg.sendFormRequest(multiForm, myOrg.members)
 
 # Member clicks on the form our org just created.
 # In practice, this will be set when a form is clicked in UI
 # This object then will be used to display and prompt member to fill in the fields
 
+# Members select the single page form
 Bob.selectForm(myOrg, 0)
 Joe.selectForm(myOrg, 0)
 
@@ -76,20 +83,33 @@ Joe.respondToField(11, Consts.checkBoxDisplayYes)
 Bob.submitFormResponse() 
 Joe.submitFormResponse() 
 
+# TESTING MULTIPLE PAGE FORM WITH BOB
+Bob.selectForm(myOrg, 2)
+
+Bob.respondToField(0, "Bob Second")
+Bob.respondToField(2, "Multipage Forms")
+Bob.respondToField(3, "Ice cold winter")
+Bob.respondToField(6, Consts.checkBoxDisplayYes)
+Bob.respondToField(10, Consts.checkBoxDisplayYes)
+
+# PAGE 2
+Bob.respondToField(13, Consts.checkBoxDisplayYes)
+Bob.respondToField(12, "Writing on page 2!")
+
+# Bob submits the multi page form
+Bob.submitFormResponse()
+
 # Demonstrate adding existing responses from organization submission
 myOrg.addExisitngResponses()
 
 # Generate excel 
 PdfGenerator.generateExcel(newForm)
 PdfGenerator.generateExcel(webForm)
+PdfGenerator.generateExcel(multiForm)
 
 #TODO: 
 # Fix weird text being hidden
 # CSV export option
-# Make sure it works w professor's form
-# Remove member functions
-# Update member functions
-# Fix the name function
 
 
 # NOTE: Checkboxes are correctly ticked in input/MyForm, they just aren't in responses/MyForm, so it has to be a matter of semantics with /0
