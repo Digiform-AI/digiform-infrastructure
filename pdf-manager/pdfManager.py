@@ -417,7 +417,9 @@ class PdfGenerator():
                     w, h = field.pageWidth, field.pageHeight # Save this page's width and height to draw a surround box
 
             # Make border around entire page (for cropping), independent of print margin settings
+            can.setLineWidth(2)
             can.rect(0,0,w,h)
+            
 
             can.showPage() # end the page
             
