@@ -1,10 +1,8 @@
-
 import os
 import json
 import boto3
 import psycopg2
 from aws_lambda_powertools.utilities import parameters
-
 
 def lambda_handler(event, context):   
     SECRET = json.loads(parameters.get_secret(os.environ.get("DB_SECRET_NAME")))
@@ -19,15 +17,16 @@ def lambda_handler(event, context):
 
     try:
         cursor = connection.cursor()
-        cursor.execute("SELECT * FROM Users u WHERE u.email = '{}'".format(event['email']))
-        results = cursor.fetchall()
+
+        cursor.execute("INSERT INTO Documents (document_name,document_path,created_date,created_by) VALUES ('{}','{}','{}','{}')".format(event['document_name'],event['document_path'],event['created_date'],event['created_by']))
+        connection.commit()
         cursor.close()
         connection.commit()
 
         return {
             'Access-Control-Allow-Origin': '*',
             'statusCode': 200,
-            'body':str(results) 
+            'body':'successfully inserted user'
         }
     except Exception as e:
         return {
