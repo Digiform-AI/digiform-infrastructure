@@ -91,15 +91,23 @@ class Api:
                     { field.index: 
                      {"name": field.name, 
                       "index": field.index, 
-                      "type": field.type, 
+                      "type": field.type,
                       "value": field.value,
                       "rect": field.rect,
                       "pageHeight": field.pageHeight,
+                      "pageIndex": field.pageIndex,
 
                       "singleSelectionOnly": field.singleChoice,
                       "groupName": field.choiceGroup,
                       "choiceName": field.choiceValue,
                       } } )
+            # # temporary for testing without api
+            # checkbox = (abs(h/w) > 0.9 and abs(h/w) < 1.1)
+
+            # # final code once hooked up to api
+
+            # for field in fields:
+            #     textFromCoordinates(field.rect[0], field.rect[1], field.rect[2], field.rect[3], field.pageHeight, field.type == "checkbox")
                 
             response.update( {"fields": fields} )
             return response
