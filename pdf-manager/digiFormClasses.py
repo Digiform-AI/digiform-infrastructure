@@ -30,9 +30,11 @@ class Member:
     def selectForm(self, org, formID):
         # iterate over active forms to see if we already have data for this request
         for req in self.activeForms:
+            # print(req.formID, " is the id of ", req.name)
             if ((req.org == org) and (req.formID == formID)):
                 # This requests matches our selection (org and ID match) so we already started it
                 self.currentForm = req
+                
                 
                 return self.currentForm
 

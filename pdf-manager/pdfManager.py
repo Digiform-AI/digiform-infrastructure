@@ -12,6 +12,7 @@ import xlsxwriter
 
 import shutil
 
+
 # This is the first point of contact with the pdf from the Organization side once they upload
 # We first must gather a list of all field names, their type, and location
 # From there, we can send the data of the field names and type to the user side for the "Electronic Entry" mode.
@@ -318,8 +319,15 @@ class PdfGenerator():
                 for annot in page["/Annots"]:
       
                     fieldData = annot.get_object()
-                    #print(fieldData)
-                    #print("\n")
+                    
+                    
+                    try:
+                            curFieldName = fieldData["/T"]
+                    except: # Key error /T - watermark?
+                        pass#print(fieldData)
+                    
+
+
                     if (fieldData["/Subtype"] == "/Widget"):
                         
                         
@@ -348,6 +356,8 @@ class PdfGenerator():
                         except:
                             # If this fails it was not generated
                             curFieldGenerated = False
+
+                        #print(curFieldName)
 
                         # Handle check box metadata
                         # Is it a check box or radio button
@@ -425,15 +435,17 @@ class PdfGenerator():
             
             packet.seek(0)
             
-            
+        
         can.save() # save the pdf
         new_pdf = PdfReader(packet) # Store the pdf containing only rectangles
 
         # Merge all pages together
         for i in range(len(existing_pdf.pages)):
+            
             page = existing_pdf.pages[i]
             page.merge_page(new_pdf.pages[i])
             output.add_page(page)
+            
 
         outputStream = open(newPath, "wb")
         output.write(outputStream)
