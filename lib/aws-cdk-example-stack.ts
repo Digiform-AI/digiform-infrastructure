@@ -50,6 +50,8 @@ export class DigiformStack extends cdk.Stack {
 		// security group controls access to DB (IPs and port)
 		const dbSecurityGroup = new ec2.SecurityGroup(this, 'DbSecurityGroup', {
 			vpc,
+			allowAllOutbound: true
+			
 		});
 
 		dbSecurityGroup.addEgressRule(Peer.anyIpv4(), Port.allTraffic())
@@ -65,6 +67,9 @@ export class DigiformStack extends cdk.Stack {
 				ec2.InstanceSize.SMALL
 			),
 			vpc,
+			vpcSubnets: {
+				subnetType: ec2.SubnetType.PUBLIC
+			},
 			databaseName,
 			securityGroups: [dbSecurityGroup],
 			publiclyAccessible:true,
@@ -134,7 +139,7 @@ export class DigiformStack extends cdk.Stack {
 			securityGroups: [lambdaSG],
 		});
 
-		// define textract lambda
+		// define textract lambd
 		const fetchUsersLambda = new PythonFunction(this, 'FetchUsers', {
 			entry: './resources/lambda/',
 			runtime: Runtime.PYTHON_3_7,
@@ -173,6 +178,24 @@ export class DigiformStack extends cdk.Stack {
 
 		// define insert user lambda
 		const insertUserLambda = new PythonFunction(this, 'InsertUser', {
+			entry: './resources/lambda/',
+			runtime: Runtime.PYTHON_3_7,
+			index: 'insert_user.py',
+			handler: 'lambda_handler',
+			environment: {
+				DB_ENDPOINT_ADDRESS: dbProxy.endpoint,
+				DB_NAME: databaseName,
+				DB_SECRET_ARN: dbInstance.secret?.secretFullArn || '',
+				DB_SECRET_NAME: dbInstance.secret?.secretName!,
+				BUCKET: bucket.bucketName,
+			},
+			timeout: Duration.minutes(5), 
+			vpc,
+			securityGroups: [lambdaSG],
+		});
+
+		// define insert documents lambda
+		const insertDocumentsLambda = new PythonFunction(this, 'InsertDocuments', {
 			entry: './resources/lambda/',
 			runtime: Runtime.PYTHON_3_7,
 			index: 'insert_user.py',
@@ -270,6 +293,10 @@ export class DigiformStack extends cdk.Stack {
 		});
 
 		const fetchUsersIntegration = new apigateway.LambdaIntegration(fetchUsersLambda, {
+			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
+		});
+
+		const insertUserIntegration = new apigateway.LambdaIntegration(insertUserLambda, {
 			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
 		});
 

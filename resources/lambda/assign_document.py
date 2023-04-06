@@ -19,7 +19,7 @@ def lambda_handler(event, context):
 
     try:
         cursor = connection.cursor()
-        cursor.execute("SELECT * FROM Users u WHERE u.email = '{}'".format(event['email']))
+        cursor.execute("INSERT INTO AssignedDocuments (assigned_date,assigned_by,assigned_to,document_assigned) VALUES ('{}','{}','{}','{}')".format(event['assigned_date'],event['assigned_by'],event['assigned_to'],event['document_assigned']))
         results = cursor.fetchall()
         cursor.close()
         connection.commit()

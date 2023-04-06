@@ -19,7 +19,7 @@ def lambda_handler(event, context):
 
     try:
         cursor = connection.cursor()
-        cursor.execute("SELECT * FROM Users u WHERE u.email = '{}'".format(event['email']))
+        cursor.execute("SELECT * FROM AssignedDocuments d WHERE d.assigned_to = '{}'".format(event['user_id']))
         results = cursor.fetchall()
         cursor.close()
         connection.commit()

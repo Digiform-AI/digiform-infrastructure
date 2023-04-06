@@ -108,19 +108,20 @@ def lambda_handler(event, context):
 
     try:
         cursor = connection.cursor()
-
-        cursor.execute(clear_db)
-        cursor.execute(schema)
-        cursor.execute(fake_data)
-        cursor.execute("SELECT * FROM Users")
-        results = cursor.fetchall()
+        
+        if event['action'] == 'CLEAR':
+            cursor.execute(clear_db)
+        elif event['action'] == 'DEFINE':
+            cursor.execute(schema)
+        elif event['action'] == 'FILL':
+            cursor.execute(fake_data)
 
         cursor.close()
         connection.commit()
 
         return {
             'statusCode': 200,
-            'body':str(results) 
+            'body':'Success'
         }
     except Exception as e:
         return {

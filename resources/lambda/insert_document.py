@@ -17,9 +17,7 @@ def lambda_handler(event, context):
 
     try:
         cursor = connection.cursor()
-
-        # insert new document
-        cursor.execute("INSERT INTO Documents (document_name, document_path, created_date, created_by) VALUES ('{}', '{}', '{}', '{}')".format(event.doc_name, event.doc_path, event.created_date, event.created_by))
+        cursor.execute("INSERT INTO Documents (document_name,document_path,created_date,created_by) VALUES ('{}','{}','{}','{}')".format(event['document_name'],event['document_path'],event['created_date'],event['created_by']))
         connection.commit()
         cursor.close()
         connection.commit()
