@@ -17,7 +17,11 @@ def lambda_handler(event, context):
 
     try:
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO Documents (document_name,document_path,created_date,created_by) VALUES ('{}','{}','{}','{}')".format(event['document_name'],event['document_path'],event['created_date'],event['created_by']))
+
+        # update the user's information for first and last name, email and phone. 
+        cursor.execute("UPDATE Users " +
+                       "SET first_name = '{}', last_name = '{}', email = '{}', phone = '{}' " + 
+                       "WHERE user_id = '{}'".format(event.new_fName, event.new_lName, event.new_email, event.new_phone, event.user_id))
         connection.commit()
         cursor.close()
         connection.commit()
@@ -25,7 +29,7 @@ def lambda_handler(event, context):
         return {
             'Access-Control-Allow-Origin': '*',
             'statusCode': 200,
-            'body' : "Successfully Inserted New Document" 
+            'body' : "Successfully Updated User Information"
         }
     except Exception as e:
         return {

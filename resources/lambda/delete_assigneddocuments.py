@@ -17,7 +17,9 @@ def lambda_handler(event, context):
 
     try:
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO Documents (document_name,document_path,created_date,created_by) VALUES ('{}','{}','{}','{}')".format(event['document_name'],event['document_path'],event['created_date'],event['created_by']))
+
+        # delete role by ID
+        cursor.execute("DELETE FROM AssignedDocuments WHERE assigned_document_id = '{}'".format(event.assigned_document_id))
         connection.commit()
         cursor.close()
         connection.commit()
@@ -25,7 +27,7 @@ def lambda_handler(event, context):
         return {
             'Access-Control-Allow-Origin': '*',
             'statusCode': 200,
-            'body' : "Successfully Inserted New Document" 
+            'body' : "Successfully Un-assigned Document from User" 
         }
     except Exception as e:
         return {

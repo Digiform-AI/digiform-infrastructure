@@ -17,7 +17,9 @@ def lambda_handler(event, context):
 
     try:
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO Documents (document_name,document_path,created_date,created_by) VALUES ('{}','{}','{}','{}')".format(event['document_name'],event['document_path'],event['created_date'],event['created_by']))
+
+        # insert tenant (company) name and logo. tenant ID is SERIAL and automatically assigned
+        cursor.execute("INSERT INTO Tenants (name, logo) VALUES ('{}', '{}')".format(event.tenant_name, event.tenant_logo))
         connection.commit()
         cursor.close()
         connection.commit()
@@ -25,7 +27,7 @@ def lambda_handler(event, context):
         return {
             'Access-Control-Allow-Origin': '*',
             'statusCode': 200,
-            'body' : "Successfully Inserted New Document" 
+            'body' : "Successfully Inserted New Tenant (Company)" 
         }
     except Exception as e:
         return {
