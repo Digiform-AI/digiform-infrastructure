@@ -190,6 +190,88 @@ class PdfGenerator():
         workbook.close()
 
         
+    # NOTE: autonomous function for devin to take a response (fields and source) and generate a pdf
+    def generate_pdf(fields, source):
+
+        reader = PdfReader(source)
+
+        writer = PdfWriter()
+        writer.append_pages_from_reader(reader)
+        writer.set_need_appearances_writer()
+        values = []
+
+        # For each response
+        for r in fields[:]:
+
+
+            # If this is a checkbox or radio button, we must convert the "No" to "/Off", etc so pdf can understand.
+            if (r.type == Consts.checkBoxDisplay or r.type == Consts.mcDisplay):
+
+                if (r.type == Consts.mcDisplay):
+                    pass
+
+                if (r.value == Consts.checkBoxDisplayYes):
+                        if r.generated:
+                            r.value = Consts.checkBoxYesState[1]
+                        else: # use /0
+                            r.value = Consts.checkBoxYesState[0]
+                else:
+                        r.value = Consts.checkBoxNoState
+            # Add to our field dict for fields to be updates
+
+            values.append(r.value)
+
+
+        """(re purposed update_page_form_field_values)"""
+        k = 0
+        # On each page 
+        for page in writer.pages:
+            
+            # For each annotation (j is index of annot) on this page
+            for j in range(len( page[PageAttributes.ANNOTS] )):
+
+                writer_annot = page[PageAttributes.ANNOTS][j].get_object()  # type: ignore
+                # print(j, k)
+                
+                # Check if we should ignore this annotation, i.e. if its name is not one of our responses
+                skip = True
+                for r in fields:
+                    if (r.name == writer_annot.get(FieldDictionaryAttributes.T)):
+                        skip = False # Don't skip this one
+
+                if skip: # Skip this!
+                    continue #without incrimenting k
+
+               
+                # Update the value. Buttons get an extra value tag
+                if writer_annot.get(FieldDictionaryAttributes.FT) == "/Btn":
+                    writer_annot.update(
+                        {
+                            NameObject(
+                                AnnotationDictionaryAttributes.AS
+                            ): NameObject(values[k])
+                        }
+                    )
+                 
+                
+                writer_annot.update(
+                {
+                    NameObject(FieldDictionaryAttributes.V): 
+                    TextStringObject( values[k] )
+                }
+                )
+                # NOTE: Make read only did not fix invisible text issue!
+                # writer_annot.update({NameObject("/Ff"): NumberObject(1)})
+
+                k += 1 # Update total respect field index (index holds across pages)
+        
+        with open("output.pdf", "wb") as output_stream:
+            writer.write(output_stream)
+        output_stream.close()
+
+        #NOTE: Attempt to flatten did not fix invisible text. Try converting to image perhaps
+        # fillpdfs.flatten_pdf(newFile, 'flat.pdf', True)
+
     # This function will take an existing form response object
     # that has been return with it's responses by a client and create a new blank forum, then fill it in.
     # NOTE: This means we must store 'blank' copy as an attribute in the form object, which will server 3 purposes
@@ -197,7 +279,6 @@ class PdfGenerator():
         # 2) We can display a visual of the pdf to users on the app
         # 3) When the server recieves a response in object form, it can use the 'blank' to make the duplicate and fill in
 
-    # Should take a form RESPONSE
     def generatePdf(response, formFolder): #formFolder passed as 'path'
         # Get the form that this response associates to
         # org = Server.getOrgByID(response.orgID)
