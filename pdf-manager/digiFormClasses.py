@@ -56,7 +56,7 @@ class Member:
         # We must call a recieveFormResponse in the Organization.
         # In that function, it will be appended to the list of responses. 
         # Then it can be clicked on, at which point the generatePDf(from response) will occur.
-
+        
         # mark complete 
         self.currentForm.complete = True
         org = self.currentForm.org
