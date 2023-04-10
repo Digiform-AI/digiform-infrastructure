@@ -190,19 +190,53 @@ class PdfGenerator():
         workbook.close()
 
         
-    # NOTE: autonomous function for devin to take a response (fields and source) and generate a pdf
-    def generate_pdf(fields, source):
+    # NOTE: autonomous function for devin to take a response (json and source) and generate a pdf
+    # no other function calls, we use new helper function pdf_to_fields to get field objects that we can populate
+    # the field objects are useful for whether it was generated, what the type is, what the name is etc
+    def generate_pdf(response, source):
 
         reader = PdfReader(source)
+        fields = PdfGenerator.pdf_to_fields(source) # unanswered - we need to fill in the answers from json data
+        # Fill in responses
+        # Response is request.body, json body from the call to the function
+        for key in response.keys():
+
+            # Fill in the field with the data:
+            # first get a reference to the current field, and define the response to this field from the input
+            field = fields[int(key)]
+            fieldValue = response[key]["value"] # Dictionary of field name : field value, looking for key "value"
+
+
+            # Field says firstname, so store the first name
+            if field.name in Consts.firstNameFields:
+                field.value = fieldValue.capitalize()
+
+            # Field says name so its probably first and last
+            elif field.name in Consts.nameFields:
+                splitName = fieldValue.split(" ")
+                
+                # Store first and maybe last name
+                firstName = splitName[0].capitalize()
+                if len(splitName) == 2:
+                    lastName = splitName[1].capitalize()
+                    field.value = firstName+" "+lastName
+                else: # Only have first name
+                    field.value = firstName
+
+                # We are given last name so store last name
+            elif field.name in Consts.lastNameFields:
+                field.value = fieldValue.capitalize()
+            
+            else: # Any non-name field need not be capitalized
+                field.value = fieldValue
 
         writer = PdfWriter()
         writer.append_pages_from_reader(reader)
         writer.set_need_appearances_writer()
         values = []
 
-        # For each response
+        # For each field we now fix up the data for checkboxes converting to machine constants such as /Off
         for r in fields[:]:
-
 
             # If this is a checkbox or radio button, we must convert the "No" to "/Off", etc so pdf can understand.
             if (r.type == Consts.checkBoxDisplay or r.type == Consts.mcDisplay):
@@ -372,6 +406,109 @@ class PdfGenerator():
         #NOTE: Attempt to flatten did not fix invisible text. Try converting to image perhaps
         # fillpdfs.flatten_pdf(newFile, 'flat.pdf', True)
 
+
+
+    # pdf to fields - extracts all fields from document, anonymous (does not save anywhere just fires and forgets)
+    # NOTE: for devin, this is autonomous
+    def pdf_to_fields(path):
+
+        reader = PdfReader(path)
+        
+    
+        myFields = []
+        fieldIndex = 0
+        curFieldPage = 0
+
+        for page in reader.pages:
+            
+            if "/Annots" in page:
+                # Store the heights so we can flip the orientation on Textract coordinate mapping (to top-to-bottom)
+                
+
+                for annot in page["/Annots"]:
+      
+                    fieldData = annot.get_object()
+                    
+                    
+                    try:
+                            curFieldName = fieldData["/T"]
+                    except: # Key error /T - watermark?
+                        pass#print(fieldData)
+                    
+
+
+                    if (fieldData["/Subtype"] == "/Widget"):
+                        
+                        
+                        curFieldType = ""
+                        curFieldValue = ""
+                        curFieldIndex = fieldIndex
+                        curFieldRect = fieldData["/Rect"]
+                        curFieldGenerated = True
+                        curFieldPageHeight = page.mediabox.height
+                        curFieldPageWidth = page.mediabox.width
+                        try:
+                            curFieldName = fieldData["/T"]
+                        except: # Key error /T
+                            continue # Skip this bad data type
+                            #curFieldName = "Unsupported_"+str(fieldIndex)
+
+                        try:
+                            fieldTypeID = fieldData["/FT"]
+                        except: # Unsupported field type (MC?)
+                            # fieldTypeID = "UnsupportedType"
+                            continue # Skip this bad data type
+
+                        # Get whether the field came from a generated form by looking for '/TU'
+                        try:
+                            fieldData["/TU"]
+                        except:
+                            # If this fails it was not generated
+                            curFieldGenerated = False
+
+                        #print(curFieldName)
+
+                        # Handle check box metadata
+                        # Is it a check box or radio button
+                        if (fieldTypeID == Consts.checkTypeID):
+                            
+                            if (curFieldName.find(":") != -1):
+                                curFieldType = Consts.mcDisplay
+                            else: 
+                                 # Checkbox only code
+                                 curFieldType = Consts.checkBoxDisplay
+                            try:
+                                curFieldValue = fieldData["/V"]
+                            except:
+                                # Field is empty!
+                                curFieldValue = ""
+                            
+
+
+                            # Readable values to machine values
+                            # System created form has /V for yes to be /Yes, no to be /Off.
+                            # Adobe forms has yes to be /0, and no to be /On. So we fix this by making an array of Consts
+                            if (curFieldValue in Consts.checkBoxYesState):
+                                curFieldValue = Consts.checkBoxDisplayYes
+                            else:
+                                curFieldValue = Consts.checkBoxDisplayNo
+
+                        # Handle text box
+                        elif (fieldTypeID == Consts.textTypeID):
+                            curFieldType = Consts.textFieldDisplay
+                            try:
+                                curFieldValue = fieldData["/V"]
+                            except:
+                                # Field is empty!
+                                curFieldValue = ""
+
+                        # Append this field to our list
+                        curField = pdfElement(curFieldName, curFieldType, curFieldValue, curFieldIndex, curFieldRect, curFieldGenerated, curFieldPageHeight, curFieldPageWidth, curFieldPage)
+                        myFields.append(curField)
+                        fieldIndex = fieldIndex + 1
+            curFieldPage+=1
+
+        return myFields
     
     # This function will generate a new form object. It can be thought of as "Starting an Event", and members of the organization
     # are per say "Invited to the event". In this case, that means being sent a "pdfRequest" object - a request to fill in

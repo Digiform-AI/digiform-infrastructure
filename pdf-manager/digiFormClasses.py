@@ -260,6 +260,9 @@ class Organization:
     # I uploaded a form on behalf of members. 
     # Turn each pdf into a form object
     # We have a reference to the current form, where we can gather most fields.
+    # NOTE: This function has to rely on databse info so im not sure it can be autonomous.
+    # Can we access db through the lambda? I need to iterate over every form the organization has to see if there's
+    # a response for this form, also need to iterate over members to see if their na
 
     def addExisitngResponses(self):
         # For each form look for a folder of its name
@@ -363,6 +366,8 @@ class Organization:
                         m_ti = time.ctime(ti_m)
 
                         # Create and add the complete response to the array of responses
+                        # This is like how in the DB responses will be added and associated with the form, the member who responded
+                        # and all other details
                         response = pdfResponse(member, m_ti, complete.fields, self.currentForm.formID, self.currentForm.org)
                         self.currentForm.responses.append(response) 
 
