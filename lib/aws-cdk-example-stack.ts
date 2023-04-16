@@ -72,7 +72,7 @@ export class DigiformStack extends cdk.Stack {
 			},
 			databaseName,
 			securityGroups: [dbSecurityGroup],
-			publiclyAccessible:true,
+			publiclyAccessible:false,
 			credentials: rds.Credentials.fromGeneratedSecret('postgres'), // Generates usr/pw in secrets manager
 			maxAllocatedStorage: 100, // Storage for DB in GB
 		});
@@ -230,6 +230,32 @@ export class DigiformStack extends cdk.Stack {
 			securityGroups: [lambdaSG],
 		});
 
+		const generatePrintPdfLambda = new PythonFunction(this, 'GeneratePrintPdf', {
+			entry: './resources/lambda/pdf',
+			runtime: Runtime.PYTHON_3_7,
+			index: 'generate_print_pdf.py',
+			handler: 'lambda_handler',
+			environment: {
+				BUCKET: bucket.bucketName,
+			},
+			timeout: Duration.minutes(5), 
+			vpc,
+			securityGroups: [lambdaSG],
+		});
+
+		const generatePrintPdfFromKeysLambda = new PythonFunction(this, 'GeneratePrintPdfFromKeys', {
+			entry: './resources/lambda/pdf',
+			runtime: Runtime.PYTHON_3_7,
+			index: 'generate_pdf_from_keys.py',
+			handler: 'lambda_handler',
+			environment: {
+				BUCKET: bucket.bucketName,
+			},
+			timeout: Duration.minutes(5), 
+			vpc,
+			securityGroups: [lambdaSG],
+		});
+
 		/*
 			ACCESS SPECIFICATIONS
 		*/
@@ -262,6 +288,9 @@ export class DigiformStack extends cdk.Stack {
 		dbInstance.secret?.grantRead(insertUserLambda);
 		dbInstance.secret?.grantWrite(insertUserLambda);
 		bucket.grantReadWrite(insertUserLambda);
+
+		bucket.grantReadWrite(generatePrintPdfLambda);
+		bucket.grantReadWrite(generatePrintPdfFromKeysLambda);
 
 		// limit traffic to DB to port 5432
 		dbSecurityGroup.addIngressRule(
@@ -296,15 +325,22 @@ export class DigiformStack extends cdk.Stack {
 			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
 		});
 
-		const insertUserIntegration = new apigateway.LambdaIntegration(insertUserLambda, {
-			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
-		});
+		// const insertUserIntegration = new apigateway.LambdaIntegration(insertUserLambda, {
+		// 	requestTemplates: { "application/json": '{ "statusCode": "200" }' }
+		// });
 
 		const insertUserIntegration = new apigateway.LambdaIntegration(insertUserLambda, {
 			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
 		});
 
 		const fetchDocumentsIntegration = new apigateway.LambdaIntegration(fetchDocumentsLambda, {
+			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
+		});
+
+		const generatePrintPdfIntegration = new apigateway.LambdaIntegration(generatePrintPdfLambda, {
+			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
+		});
+		const generatePrintPdfFromKeysIntegration = new apigateway.LambdaIntegration(generatePrintPdfFromKeysLambda, {
 			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
 		});
 
@@ -329,9 +365,12 @@ export class DigiformStack extends cdk.Stack {
 		const documents = api.root.addResource('documents');
 		documents.addMethod("GET", fetchDocumentsIntegration);
 
+		const pdfFunctions = api.root.addResource('generatePrintPdf');
+		pdfFunctions.addMethod("POST", generatePrintPdfIntegration);
 
-
-
+		const generatePrintPdfFromKeysFunction = api.root.addResource('generatePdfFromKeys');
+		generatePrintPdfFromKeysFunction.addMethod("POST", generatePrintPdfFromKeysIntegration);
+		
 		/*
 			COGNITO
 		*/
