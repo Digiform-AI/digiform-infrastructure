@@ -25,10 +25,15 @@ def lambda_handler(event, context):
         cursor.close()
         connection.commit()
 
+        json_results = json.dumps(results, default=str)
+
         return {
-            'Access-Control-Allow-Origin': '*',
             'statusCode': 200,
-            'body':str(results) 
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json_results
         }
     except Exception as e:
         return {

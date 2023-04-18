@@ -19,7 +19,7 @@ def lambda_handler(event, context):
     try:
         cursor = connection.cursor()
 
-        cursor.execute("INSERT INTO Users (first_name,last_name,email,phone,joined_date,tenant_key) VALUES ('{}','{}','{}','{}','{}','{}')".format(event.first_name,event.last_name,event.email,event.phone,event.joined_date,event.tenant_key))
+        cursor.execute("INSERT INTO Users (first_name,last_name,email,phone,joined_date,tenant_key) VALUES ('{}','{}','{}','{}','{}','{}')".format(event['first_name'],event['last_name'],event['email'],event['phone'],event['joined_date'],event['tenant_key']))
         connection.commit()
         cursor.close()
         connection.commit()
