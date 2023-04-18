@@ -15,6 +15,11 @@ class Api:
     myOrg.sendFormRequest(newForm, myMember)
     myMember.selectForm(myOrg, 0) # Select this form for updates
 
+    inspForm = myOrg.generateNewForm("inspection.pdf", "Inspection", "01/01/01")
+    myOrg.sendFormRequest(inspForm, myMember)
+    myMember.selectForm(myOrg, 1) # Select this form for updates
+
+
     # Member submits the form they are currently editing
     @app.route('/submitForm/', methods = ['GET','POST'])
     def submitCurrentForm():
@@ -86,7 +91,13 @@ class Api:
             # Now add the fields
             # NOTE: I included the height of the containing page for coordinate localization.
             fields = {}
+            numPages = 0
             for field in form.fields:
+
+                # Keep track of the total number of pages
+                if field.pageIndex > numPages:
+                    numPages += 1
+
                 fields.update( 
                     { field.index: 
                      {"name": field.name, 
@@ -110,6 +121,8 @@ class Api:
             #     textFromCoordinates(field.rect[0], field.rect[1], field.rect[2], field.rect[3], field.pageHeight, field.type == "checkbox")
                 
             response.update( {"fields": fields} )
+            
+            response.update( { 'pages': numPages + 1 } )
             return response
         else:
             return "404 Form not found!"

@@ -1,9 +1,9 @@
 from digiFormClasses import Organization, Server, Member
 from pdfStructure import pdfElement, Consts
-from pdfManager import PdfGenerator
+from pdf_simulator import PdfGenerator
 from api import Api
 
-# Sample Driver code 
+# Sample Driver code to simulate the system.
 server = Server()
 
 myOrg = server.createOrg("ABC Construction")
@@ -183,10 +183,11 @@ PdfGenerator.generateExcel(newForm)
 PdfGenerator.generateExcel(webForm)
 PdfGenerator.generateExcel(multiForm)
 PdfGenerator.generateExcel(inspForm)
+PdfGenerator.generate_csv(inspForm)
+# PdfGenerator.cropForm('test.png')
 
 #TODO: 
 # Fix weird text being hidden
-# CSV export option
 
 
 # NOTE: Checkboxes are correctly ticked in input/MyForm, they just aren't in responses/MyForm, so it has to be a matter of semantics with /0
