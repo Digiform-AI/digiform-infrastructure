@@ -106,6 +106,7 @@ class Api:
                       "value": field.value,
                       "rect": field.rect,
                       "pageHeight": field.pageHeight,
+                      "pageWidth": field.pageWidth,
                       "pageIndex": field.pageIndex,
 
                       "singleSelectionOnly": field.singleChoice,
