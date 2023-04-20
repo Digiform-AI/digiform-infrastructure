@@ -116,17 +116,13 @@ def lambda_handler(event, context):
             cursor.execute(schema)
         elif event['action'] == 'FILL':
             cursor.execute(fake_data)
-        elif event['action'] == 'QUERY':
-            cursor.execute(event['query'])
-
-        res = cursor.fetchall()
 
         cursor.close()
         connection.commit()
 
         return {
             'statusCode': 200,
-            'body':json.dumps(res, default=str)
+            'body':'success'
         }
     except Exception as e:
         return {

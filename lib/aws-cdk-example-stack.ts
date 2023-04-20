@@ -67,11 +67,10 @@ export class DigiformStack extends cdk.Stack {
 			vpc,
 			databaseName,
 			securityGroups: [dbSecurityGroup],
-			publiclyAccessible: true,
+			publiclyAccessible: false,
 			credentials: rds.Credentials.fromGeneratedSecret('postgres'), // Generates usr/pw in secrets manager
 			maxAllocatedStorage: 100, // Storage for DB in GB
 		});
-
 
 		/*
 			S3 SPECIFICATIONS
@@ -79,7 +78,6 @@ export class DigiformStack extends cdk.Stack {
 
 		// storage bucket
 		const bucket = new s3.Bucket(this, "DigiformStore");
-
 
 		/*
 			LAMBDA SPECIFICATIONS
@@ -109,7 +107,6 @@ export class DigiformStack extends cdk.Stack {
 			'Lambda to Postgres database'
 		);
 
-
 		const queryLambda = new PythonFunction(this, 'Query DB', {
 			entry: './resources/lambda/',
 			runtime: Runtime.PYTHON_3_9,
@@ -138,8 +135,6 @@ export class DigiformStack extends cdk.Stack {
 			defaultCorsPreflightOptions: cors
 		});
 		query.addMethod("POST", queryIntegration);
-
-
 
 
 
@@ -205,6 +200,8 @@ export class DigiformStack extends cdk.Stack {
 		preparePdf.addMethod("POST", preparePdfIntegration);
 
 
+
+
 		const searchPdfLambda = new PythonFunction(this, 'search PDF', {
 			entry: './resources/lambda/',
 			runtime: Runtime.PYTHON_3_9,
@@ -233,6 +230,8 @@ export class DigiformStack extends cdk.Stack {
 			defaultCorsPreflightOptions: cors
 		});
 		searchPdf.addMethod("POST", searchPdfIntegration);
+
+
 
 
 		const pushPdfLambda = new PythonFunction(this, 'push PDF', {

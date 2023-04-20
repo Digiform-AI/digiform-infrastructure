@@ -16,15 +16,7 @@ def lambda_handler(event, context):
     )
 
     try:
-        cursor = connection.cursor()
-
-        # update the user's information for first and last name, email and phone. 
-        cursor.execute("UPDATE Users " +
-                       "SET first_name = '{}', last_name = '{}', email = '{}', phone = '{}' " + 
-                       "WHERE user_id = '{}'".format(event.new_fName, event.new_lName, event.new_email, event.new_phone, event.user_id))
-        connection.commit()
-        cursor.close()
-        connection.commit()
+        
 
         return {
             'Access-Control-Allow-Origin': '*',
