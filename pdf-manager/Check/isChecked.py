@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 
-def crop_img(img, scale=1.0):
+def zoom_img(img, scale=1.0):
     center_x, center_y = img.shape[1] / 2, img.shape[0] / 2
     width_scaled, height_scaled = img.shape[1] * scale, img.shape[0] * scale
     left_x, right_x = center_x - width_scaled / 2, center_x + width_scaled / 2
@@ -17,7 +17,7 @@ def isChecked(path):
     PIX_RANGE = 100 # Pixel darkness to consider marked
 
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE) # Load image as grayscale
-    img_cropped = crop_img(img, CROP)            # Crop to remove any border
+    img_cropped = zoom_img(img, CROP)            # Crop to remove any border
 
     n_black_pix = np.sum(img_cropped < PIX_RANGE)
     if n_black_pix > THRESHOLD:
