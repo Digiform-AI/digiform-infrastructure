@@ -231,6 +231,11 @@ class extraction:
 
         pageIndex = 0
         ''' Execute for each page '''
+        # Ensure input directory exists
+        if not os.path.exists(extraction.input_path):
+            os.mkdir(extraction.input_path)
+            print('ERROR: The stated input directory did not exist! It has been created for you, and program aborted: ', extraction.input_path)
+            return None
 
         # file path to the image taken of this page
         for filename in os.listdir(extraction.input_path):
