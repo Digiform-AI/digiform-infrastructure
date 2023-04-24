@@ -33,6 +33,7 @@ newForm = myOrg.generateNewForm("sample.pdf", "My Form", "01/01/01")
 inspForm = myOrg.generateNewForm("inspection.pdf", "Inspection", "01/01/01")
 multiForm = myOrg.generateNewForm("sample2page.pdf", "Multipage Form", "06/09/04")
 cleanForm = myOrg.generateNewForm("sample-clean.pdf", "Clean Form", "06/09/04")
+dispForm = myOrg.generateNewForm("disburse.pdf", "Disbursement Form", "01/01/01")
 
 # Demonstrate creation of pdf document through frontend
 fields = []
@@ -46,6 +47,7 @@ webForm = myOrg.createPdfFromDesktop(fields, "Devin's Form", "02 / 30 / 23")
 # cleans up page number, page height, rect objects and what not in pdf manager
 
 PdfGenerator.printForm(newForm)
+PdfGenerator.printForm(dispForm)
 PdfGenerator.printForm(inspForm)
 PdfGenerator.printForm(webForm)
 PdfGenerator.printForm(cleanForm)

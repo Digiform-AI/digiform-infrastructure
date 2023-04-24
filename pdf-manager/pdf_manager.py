@@ -3,9 +3,8 @@ from pdfStructure import pdfElement, Consts
 from pypdf.generic import NameObject, TextStringObject
 from pypdf.constants import *
 from reportlab.pdfgen import canvas
-import io, cv2, json
+import os, cv2, json
 import numpy as np
-from PIL import Image
 
 import xlsxwriter, csv
 import shutil
@@ -568,47 +567,57 @@ class PdfGenerator():
     # Creates borders around the text to tell user where to write responses
     # Also creates a border on the outside of the document so we know where to crop after the scan
     # Must be called from the print button to print this form (path returned)
-    def print_form(path):
+    def printForm(path):
         newPath = path.replace(".pdf", "-print.pdf")
         fields = PdfGenerator.pdf_to_fields(path)
 
         shutil.copy(path, newPath) # Create a copy to put the boxes onto
-        
-        # Set up a new blank file to draw rectangles on
-        packet = io.BytesIO()
-        can = canvas.Canvas(packet)
 
         existing_pdf = PdfReader(open(newPath, "rb")) # Store the existing pdf, the copy which we will overlay the boxes to
         output = PdfWriter() # designate a file for the final output
 
+        stage_path = 'rectangles'
+
+        # make sure the staging directory exists
+        if not os.path.exists(stage_path):
+            os.mkdir(stage_path)
         
+
         # For each page, generate a page on a new buffer of just boxes. Later, we overlay the two.
         for i in range(len(existing_pdf.pages)):
             w, h = 0, 0
+
+            # to gather the page size
+            for field in fields:
+                if field.pageIndex == i: # Make sure this field is on this page!
+                    w, h = field.pageWidth, field.pageHeight # Save this page's width and height to draw a surround box
+                    break
+
+            # we can now make the canvas for this page because we know the size
+            # if we get an error there may be no fields on the page. Detect that above and set pagesize to letter if so
+            cur_page = "page"+str(i + 1)+".pdf"
+            can = canvas.Canvas(os.path.join(stage_path, cur_page), pagesize=(w,h))
+
             
             # Make each border for a field on this page, only
             for field in fields:
                 if field.pageIndex == i: # Make sure this field is on this page!
                     can.rect(field.rect[0], field.rect[1], field.rect[2] - field.rect[0], field.rect[3] - field.rect[1])
-                    w, h = field.pageWidth, field.pageHeight # Save this page's width and height to draw a surround box
 
             # Make border around entire page (for cropping), independent of print margin settings
             can.setLineWidth(2)
             can.rect(0,0,w,h)
 
-            can.showPage() # end the page
-            
-            packet.seek(0)
+            can.save() # page is done
+
             
         
-        can.save() # save the pdf
-        new_pdf = PdfReader(packet) # Store the pdf containing only rectangles
-
         # Merge all pages together
         for i in range(len(existing_pdf.pages)):
             
+            new_page_pdf = PdfReader( open(os.path.join(stage_path, "page"+str(i + 1)+".pdf"), "rb"))
             page = existing_pdf.pages[i]
-            page.merge_page(new_pdf.pages[i])
+            page.merge_page(new_page_pdf.pages[0])
             output.add_page(page)
             
 
@@ -616,4 +625,36 @@ class PdfGenerator():
         output.write(outputStream)
         outputStream.close()
 
+        # clear the staging directory as we have used the new pages of rectangles
+        files = os.listdir(stage_path)
+
+        for file in files:
+            file_path = os.path.join(stage_path, file)
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+                
         return newPath
+    
+    # decrypt the given pdf and return the path to the new doc
+    def decrypt_pdf(path):
+        pdf_writer = PdfWriter()
+        pdf_reader = PdfReader(path)
+
+        # add each page from the original PDF to the new PDF writer
+        for page_num in range(len(pdf_reader.pages)):
+            page = pdf_reader.pages[page_num]
+            pdf_writer.add_page(page)
+
+        # remove the encryption from the new PDF
+        pdf_writer.encrypt("", "")
+
+        file_name, file_extension = os.path.splitext(path)
+
+        # create a new file path for the decrypted PDF
+        new_file_path = file_name + "-decrypted" + file_extension
+
+        # write the new PDF to disk
+        with open(new_file_path, "wb") as output_file:
+            pdf_writer.write(output_file)
+
+        return new_file_path
