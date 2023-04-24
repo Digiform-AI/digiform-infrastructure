@@ -7,14 +7,20 @@ from aws_lambda_powertools.utilities import parameters
 s3 = boto3.client('s3')
 
 def lambda_handler(event, context):   
-    file_name = event['filename']
+    file_name = event['file_name']
     bucket_name = os.environ.get("BUCKET")
 
     try:
         if(event['action'] == 'PUSH'):
-            s3.upload_file(file_name, bucket_name, file_name)
+            file_content = event['file_content']
+            s3.put_object(Bucket=bucket_name, Key=file_name, Body=file_content)
             return {
                 'statusCode': 200,
+                'headers': {
+                    'Content-type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Credentials': True,
+                },
                 'body': 'File uploaded successfully'
             }
         else:
@@ -24,6 +30,8 @@ def lambda_handler(event, context):
                 'statusCode': 200,
                 'headers': {
                     'Content-type': 'application/pdf',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Credentials': True,
                     'Content-Disposition': 'attachment; filename="example_file.pdf"'
                 },
                 'body': file_content,
