@@ -1,10 +1,10 @@
+import copy
 import json
 import numpy as np
 import cv2, os, random
 import pytesseract
 from pytesseract import Output 
 from PIL import Image
-import requests
 
 # NOTE: the documents directory must contain one file for each page of the multi-page # document (1 image only if 1 page document). This is for multi-page conversion support.
 # NOTE: if the api is called with fields that belong on x pages, the code will error if there are
@@ -62,6 +62,10 @@ class extraction:
         return False
 
     def crop(path, width, height):
+        # we pass width and height because the final output once its straight and cropped must be
+        # the same size as the pdf page so that when we overlay the two they are of the same scale!
+
+        # however, we use w and h which is these values adjusted for the current dpi that way we can properly find the corners.
     
         # load and set dpi
         im = Image.open(path)
@@ -134,6 +138,8 @@ class extraction:
         b = max_cnt[1][0]
         c = max_cnt[2][0]
         d = max_cnt[3][0]
+        coords = [a,b,c,d]
+        # coords = [ [x,y], [x,y], [x,y], [c,y]]
 
         # Create a white mask of the same size as the input image
         mask = np.ones(img.shape[:2], dtype=np.uint8) * 255
@@ -155,27 +161,56 @@ class extraction:
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
-        '''Fix the warping of the image '''
+        '''Fix the warping of the image by quadrant mapping'''
 
-        # if bl/tl are swapped, fix them to resolve rotation errors
-        if (b[1] > new_img.shape[1] / 2): # we need to swap BL and TL coords
-            temp = b # save b so we dont loose it 
-    
-            b = c
-            c = d
-            d = a
-            a = temp
+        # For each coordinate
+        newCoords = copy.deepcopy(coords)
+        # height and width in pixels at this dpi
+        h = height/72 * extraction.dpi
+        w = width/72 * extraction.dpi
+        # possible error: where else do we use width and height? should they be adjusted, too?
+        for coord in coords:
+            
+            x = coord[0]
+            y = coord[1]
             
 
-        src = np.array([[b[0], b[1]], [a[0], a[1]],[d[0], d[1]],[c[0], c[1]]])
-        dest = np.array([[0,0],[width,0],[width,height],[0,height]])
+            if x < w/2 and y < h/2:
+                newCoords[0] = coord
+                continue
+            if x < w/2 and y >= h/2:
+                newCoords[1] = coord
+                continue
+            if x >= w/2 and y < h/2:
+                newCoords[2] = coord
+                continue
+            if x >= w/2 and y >= h/2:
+                newCoords[3] = coord
+                continue
+
+
+        # print(coords[0])
+        x1 = newCoords[0][0]
+        y1 = newCoords[0][1]
+
+        x2 = newCoords[1][0]
+        y2 = newCoords[1][1]
+
+        x3 = newCoords[2][0]
+        y3 = newCoords[2][1]
+
+        x4 = newCoords[3][0]
+        y4 = newCoords[3][1]
+
+        src = np.array([[x1, y1], [x2,y2],[x3, y3], [x4,y4]])
+        dest = np.array([[0,0],[0,h],[w,0],[w,h]])
 
         # Calculate the transformation matrix
         M, _ = cv2.findHomography(src, dest)
 
         # Apply perspective correction to the image
-        img_corrected = cv2.warpPerspective(new_img, M, (round(width), round(height)))
-
+        img_corrected = cv2.warpPerspective(new_img, M, (round(w), round(h)))
+        # cv2.imwrite('peter.png', img_corrected)
         ''' Make sure the image is the right 90 degree orientation'''
         gray = cv2.cvtColor(img_corrected, cv2.COLOR_BGR2GRAY)
         # Perform OCR on the image and get the OSD information
@@ -200,7 +235,7 @@ class extraction:
         elif angle > 70 and angle < 110:
             img_corrected = cv2.rotate(img_corrected, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
-        img_corrected = cv2.resize(img_corrected, (round(width), round(height)))
+        img_corrected = cv2.resize(img_corrected, (round(w), round(h)))
 
         ''' Show the results '''
         if debug:
@@ -217,12 +252,13 @@ class extraction:
         return extension in image_extensions
 
     def empty_dir(path):
-        files = os.listdir(path)
+        if os.path.exists(path):
+            files = os.listdir(path)
 
-        for file in files:
-            path = os.path.join(path, file)
-            if os.path.isfile(path):
-                os.unlink(path)
+            for file in files:
+                path = os.path.join(path, file)
+                if os.path.isfile(path):
+                    os.unlink(path)
     
     def fill_fields(fields):
         # Clear output staging directories (input page is unlinked below after it's crop completes)
@@ -265,19 +301,20 @@ class extraction:
                 if not os.path.exists(extraction.output_path):
                     os.mkdir(extraction.output_path)
 
-                cv2.imwrite(extraction.output_path, img)
+                cv2.imwrite(os.path.join(extraction.output_path, (str(pageIndex + 1)+'.jpg')), img)
 
                 ''' GET THE EXTRACTED DATA (lines)'''
                 url = "https://trigger.extracttable.com"
                 payload={'dup_check': 'False'}
                 files=[
-                ('input',('form.jpeg',open(path,'rb'),'image/jpeg'))
+                ('input',('form.jpg',open(path,'rb'),'image/jpg'))
                 ]
                 headers = {
                 'x-api-key': 'Cm2Cts2RBl8UwjCsPfPO9szGhYqsGLrgh2Xly1dW'
                 }
-                response = requests.request("POST", url, headers=headers, data=payload, files=files)
-                lines = json.loads(response.text)['Lines'][0]['LinesArray']
+                # response = requests.request("POST", url, headers=headers, data=payload, files=files)
+                # lines = json.loads(response.text)['Lines'][0]['LinesArray']
+                lines = []
 
                 ''' PREPARING CHECKBOX DETECTION '''
                 gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # first the scanned and cropped page is to become grayscale
@@ -332,3 +369,4 @@ class extraction:
         # we can now empty the input directory!
         extraction.empty_dir(extraction.input_path)
         return fields
+
