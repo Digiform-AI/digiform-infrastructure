@@ -19,10 +19,11 @@ def lambda_handler(event, context):
 
     try:
         cursor = connection.cursor()
-
-        resource = event['resource']
-        command = event['command']
-        request = event['request']
+        print('entered')
+        
+        resource = json.loads(event['body'])['resource']
+        command = json.loads(event['body'])['command']
+        request = json.loads(event['body'])['request']
 
         response = ''
         if(resource == 'Users'):
@@ -34,7 +35,6 @@ def lambda_handler(event, context):
                 response = users.updateUser(request['email'], request['user'])
             if(command == 'INSERT'):
                 response = users.insertUser(request['user'])
-        
         elif(resource == 'Documents'):
             if(command == 'GET'):
                 response = documents.getDocument(request['documentId'])
@@ -61,11 +61,20 @@ def lambda_handler(event, context):
         cursor.close()
         connection.commit()
 
+        print('return val')
+        print(json.dumps(response))
+
         return {
             'statusCode': 200,
-            'body':response
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Credentials': True,
+            },
+            'body': json.dumps(response)
         }
     except Exception as e:
+        print('error occurred')
+        print(e)
         return {
             'statusCode': 400,
             'body': str(e)

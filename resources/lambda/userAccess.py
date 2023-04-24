@@ -16,11 +16,14 @@ connection = psycopg2.connect(
 )
 
 def getUser(userEmail):
+    print('Get User')
     cursor = connection.cursor()
     cursor.execute("SELECT user_id, first_name, last_name, email, phone FROM Users u WHERE u.email = '{}'".format(userEmail))
     results = cursor.fetchall()
+    print('Fetch call made')
     cursor.close()
     connection.commit()
+    print('Return Data')
     return json.dumps({
         "user_id": results[0][0],
         "first_name": results[0][1],

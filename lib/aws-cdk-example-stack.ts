@@ -98,6 +98,7 @@ export class DigiformStack extends cdk.Stack {
 		// lambda security group
 		const lambdaSG = new ec2.SecurityGroup(this, 'LambdaSG', {
 			vpc,
+			allowAllOutbound: true,
 		});
 
 		// limit traffic to DB to port 5432
@@ -129,12 +130,19 @@ export class DigiformStack extends cdk.Stack {
 		bucket.grantReadWrite(queryLambda);
 
 		const queryIntegration = new apigateway.LambdaIntegration(queryLambda, {
-			requestTemplates: { "application/json": '{ "statusCode": "200" }' }
+			requestTemplates: { "application/json": '{ "statusCode": "200" }' },
+
+
 		});
 		const query = api.root.addResource('query', {
-			defaultCorsPreflightOptions: cors
+			defaultCorsPreflightOptions: cors,
+
 		});
-		query.addMethod("POST", queryIntegration);
+		query.addMethod("POST", queryIntegration, {
+			methodResponses: [{
+				statusCode: '200',
+			}],
+		});
 
 
 
