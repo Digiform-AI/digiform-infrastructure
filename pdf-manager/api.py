@@ -1,7 +1,10 @@
 from flask import Flask, current_app, request
 from digiFormClasses import Member, Organization, Server
+from muskaan import extraction
+import json, os
 
 class Api:
+
 
     app = Flask(__name__)
     server = Server() # Make new static test server
@@ -19,6 +22,25 @@ class Api:
     myOrg.sendFormRequest(inspForm, myMember)
     myMember.selectForm(myOrg, 1) # Select this form for updates
 
+
+    @app.route('/extract', methods = ['POST'])
+    def extract():
+        # Save files to documents folder
+        target=os.path.join('./','documents/uncropped')
+        if not os.path.isdir(target):
+            os.mkdir(target)
+        files = request.files
+        for i in files:
+            file = request.files[i]
+            destination = "/".join([target, i])
+            file.save(destination)
+
+        #Fetch fields from the formdata
+        data = request.form.get('fields')
+        fields = json.loads(data)
+
+        updatedFields = extraction.fill_fields(fields)
+        return updatedFields 
 
     # Member submits the form they are currently editing
     @app.route('/submitForm/', methods = ['GET','POST'])
@@ -132,7 +154,8 @@ class Api:
     def __init__(self):
         
         {
-            #self.app.run(debug=True, port= 5000)
+            #self.app.run(host="0.0.0.0", debug=True, port= 8000)
+            
         }
 
 Api()

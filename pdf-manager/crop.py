@@ -2,9 +2,12 @@ import cv2, os
 import numpy as np
 import pytesseract
 from pytesseract import Output
+import copy
+from PIL import Image
 
-debug = False
+debug = True
 inputs = 'crop-forms'
+dpi = 200
 # All files in the directory will be converted and shown.
 
 def is_image_file(path):
@@ -14,11 +17,19 @@ def is_image_file(path):
 
 def crop(path):
     # Load the image
+    im = Image.open(path)
+
+    # Set the DPI
+    im.info['dpi'] = (dpi, dpi)
+
+    # Save the image with the new DPI
+    im.save(path)
+    
     img = cv2.imread(path)
 
     # Define the size of the output image
-    width = 1190# width of the output image
-    height = 1684 # height of the output image
+    width = img.shape[1]# width of the output image
+    height = img.shape[0] # w of the output image
 
     if debug:
         cv2.imshow('Original Image', img)
@@ -78,6 +89,7 @@ def crop(path):
     b = max_cnt[1][0]
     c = max_cnt[2][0]
     d = max_cnt[3][0]
+    coords = [a,b,c,d]
 
     # Create a white mask of the same size as the input image
     mask = np.ones(img.shape[:2], dtype=np.uint8) * 255
@@ -99,23 +111,49 @@ def crop(path):
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    '''Fix the warping of the image '''
-    
-    # default to good rotation
-    bad_rot = False
-    # if bl/tl are swapped, fix them to resolve rotation errors
-    if (b[1] > new_img.shape[1] / 2): # we need to swap BL and TL coords
-        bad_rot = True
-        temp = b # save a so we dont loose it 
+    '''Fix the warping of the image by quadrant mapping'''
 
-        b = c
-        c = d
-        d = a
-        a = temp
-            
+    # For each coordinate
+    newCoords = copy.deepcopy(coords)
+    # w and width in pixels at this dpi
+    #h = w/72 * dpi
+    #w = width/72 * dpi
+    # possible error: where else do we use width and w? should they be adjusted, too?
+    for coord in coords:
+        
+        x = coord[0]
+        y = coord[1]
+        
 
-    src = np.array([[b[0], b[1]], [a[0], a[1]],[d[0], d[1]],[c[0], c[1]]])
-    dest = np.array([[0,0],[width,0],[width,height],[0,height]])
+        if x < width/2 and y < height/2:
+            newCoords[0] = coord
+            continue
+        if x < width/2 and y >= height/2:
+            newCoords[1] = coord
+            continue
+        if x >= width/2 and y < height/2:
+            newCoords[2] = coord
+            continue
+        if x >= width/2 and y >= height/2:
+            newCoords[3] = coord
+            continue
+
+
+    # print(coords[0])
+    x1 = newCoords[0][0]
+    y1 = newCoords[0][1]
+
+    x2 = newCoords[1][0]
+    y2 = newCoords[1][1]
+
+    x3 = newCoords[2][0]
+    y3 = newCoords[2][1]
+
+    x4 = newCoords[3][0]
+    y4 = newCoords[3][1]
+
+    src = np.array([[x1, y1], [x2,y2],[x3, y3], [x4,y4]])
+    dest = np.array([[0,0],[0,height],[width,0],[width,height]])
 
     # Calculate the transformation matrix
     M, _ = cv2.findHomography(src, dest)
@@ -124,8 +162,8 @@ def crop(path):
     img_corrected = cv2.warpPerspective(new_img, M, (round(width), round(height)))
 
     # Fix rotation error 
-    if bad_rot:
-        img_corrected = cv2.rotate(img_corrected, cv2.ROTATE_180)
+   # if bad_rot:
+      #  img_corrected = cv2.rotate(img_corrected, cv2.ROTATE_180)
 
     ''' Make sure the image is the right 90 degree orientation'''
     gray = cv2.cvtColor(img_corrected, cv2.COLOR_BGR2GRAY)
