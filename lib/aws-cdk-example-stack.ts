@@ -242,10 +242,10 @@ export class DigiformStack extends cdk.Stack {
 
 
 
-		const pushPdfLambda = new PythonFunction(this, 'push PDF', {
+		const pushPdfLambda = new PythonFunction(this, 'S3 handler', {
 			entry: './resources/lambda/',
 			runtime: Runtime.PYTHON_3_9,
-			index: 'push_to_s3.py',
+			index: 's3_handler.py',
 			handler: 'lambda_handler',
 			environment: {
 				DB_ENDPOINT_ADDRESS: dbInstance.dbInstanceEndpointAddress,
