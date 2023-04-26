@@ -5,7 +5,7 @@ from pypdf.constants import *
 from reportlab.pdfgen import canvas
 from reportlab.platypus import SimpleDocTemplate
 from reportlab.lib.utils import ImageReader
-import os, io, csv
+import os, io, csv, json
 
 import xlsxwriter
 
@@ -406,27 +406,34 @@ class PdfGenerator():
     # given fields, return member name
     # NOTE this gets called after extract, and before saving response.
     def getNameByFields(fields):
-        firstName = "Name"
+        firstName = ""
         lastName = ""
+        name = ""
+
+        
         for field in fields:
+
             # Field says firstname, so store the first name
             if field.name in Consts.firstNameFields:
                 firstName = field.value.capitalize()
 
             # Field says name so its probably first and last
             if field.name in Consts.nameFields:
-                splitName = field.value.split(" ")
+                name = field.value
+                # splitName = field.value.split(" ")
                 
-                # Store first and maybe last name
-                firstName = splitName[0].capitalize()
-                if len(splitName) == 2:
-                    lastName = splitName[1].capitalize()
+                # # Store first and maybe last name
+                # firstName = splitName[0].capitalize()
+                # if len(splitName) == 2:
+                #     lastName = splitName[1].capitalize()
 
             # We are given last name so store last name
             if field.name in Consts.lastNameFields:
                 lastName = field.value.capitalize()
         
-        return [firstName, lastName]
+        if not name:
+            return firstName + ' ' + lastName
+        return name
     
     # This function will generate a new form object. It can be thought of as "Starting an Event", and members of the organization
     # are per say "Invited to the event". In this case, that means being sent a "pdfRequest" object - a request to fill in

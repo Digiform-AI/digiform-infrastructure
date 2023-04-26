@@ -4,20 +4,7 @@ from datetime import datetime
 import os, time, shutil
 import boto3
 
-# Initialize the S3 client
-s3 = boto3.client('s3', aws_access_key_id='AKIAVXBO2IXZKY5J2FN5', aws_secret_access_key='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')
 
-# Set the S3 bucket and key for the image
-bucket_name = 'ms-inventory-management'
-
-# Delete all objects from the bucket
-# List all objects in the bucket
-response = s3.list_objects(Bucket=bucket_name)
-if 'Contents' in response:
-    objects = response['Contents']
-    # Delete all objects from the bucket
-    for obj in objects:
-        s3.delete_object(Bucket=bucket_name, Key=obj['Key'])
 
 # Server class 
 class Server:
@@ -77,12 +64,12 @@ class Member:
         self.currentForm.complete = True
         org = self.currentForm.org
         fields = self.currentForm.fields
-
+        
         # STORE THE GIVEN NAME SO WE CAN RETURN IT TO THE WEBSITE
         name = PdfGenerator.getNameByFields(fields)
-        self.firstName = name[0]
-        self.lastName = name[1]
-        name = name[0] + ' ' + name[1]
+        # self.firstName = name[0]
+        # self.lastName = name[1]
+        # name = name[0] + ' ' + name[1]
 
         formID = self.currentForm.formID
         # We need the responder's ID.. or can we just pass the responder object themself?
@@ -128,15 +115,18 @@ class Member:
 
             # Field says name so its probably first and last
             elif response.name in Consts.nameFields:
+
+                response.value = fieldValue
                 splitName = fieldValue.split(" ")
                 
                 # Store first and maybe last name
                 firstName = splitName[0].capitalize()
-                if len(splitName) == 2:
+                if len(splitName) >= 2:
                     lastName = splitName[1].capitalize()
                     response.value = firstName+" "+lastName
                 else: # Only have first name
                     response.value = firstName
+                
 
                 # We are given last name so store last name
             elif response.name in Consts.lastNameFields:
@@ -180,6 +170,12 @@ class Member:
 # Organization class
 class Organization:
 
+    AWS_SECRET_KEY = ""
+    AWS_ACCESS_KEY = ""
+    bucket_name = ""
+    s3 = None
+    
+
     # A new organization is formed
     # Begin with a name and an empty list of forms.
     def __init__(self, name):
@@ -189,11 +185,38 @@ class Organization:
         self.members = []
         self.currentForm = None
 
+    # SET ACCESS KEYS
+    def initializeBucket(self, access, secret):
+        Organization.AWS_ACCESS_KEY = access
+        Organization.AWS_SECRET_KEY = secret
+
+        # Initialize the S3 client
+        Organization.s3 = boto3.client('s3', aws_access_key_id=access, aws_secret_access_key=secret)
+
+        # Set the S3 bucket and key for the image
+        Organization.bucket_name = 'ms-inventory-management'
+
+        # Delete all objects from the bucket
+        # List all objects in the bucket
+
+        try:
+            response = Organization.s3.list_objects(Bucket=Organization.bucket_name)
+            if 'Contents' in response:
+                objects = response['Contents']
+                # Delete all objects from the bucket
+                for obj in objects:
+                    Organization.s3.delete_object(Bucket=Organization.bucket_name, Key=obj['Key'])
+        except:
+            pass
+
+
     def uploadS3(path, old_key):
         # delete old link, if exists
         if old_key:
-            s3.delete_object(Bucket=bucket_name, Key=old_key)
-
+            try:
+                Organization.s3.delete_object(Bucket=Organization.bucket_name, Key=old_key)
+            except:
+                pass
 
         # upload new file
         image_key = str(datetime.now())
@@ -203,12 +226,12 @@ class Organization:
 
         image_key += os.path.splitext(path)[1]
         with open(path, 'rb') as f:
-            s3.upload_fileobj(f, bucket_name, image_key)
+            Organization.s3.upload_fileobj(f, Organization.bucket_name, image_key)
         
-        url = s3.generate_presigned_url(
+        url = Organization.s3.generate_presigned_url(
         ClientMethod='get_object',
         Params={
-            'Bucket': bucket_name,
+            'Bucket': Organization.bucket_name,
             'Key': image_key
         },
         ExpiresIn=None
