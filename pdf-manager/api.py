@@ -3,6 +3,20 @@ from digiFormClasses import Member, Organization, Server
 from muskaan import extraction
 import json, os
 
+# for get forms -
+# update to description not organization
+
+# getResponses/<id> endpoint
+# send fields, name, response date FOR EACH
+
+#bucket: 2 folders
+# one is the printable version that link is in the database for each form
+# one collection for responses
+# one collection for forms: contains url for printable form
+
+#add signatures to the generated pdf before sending to s3
+
+
 class Api:
 
 
@@ -51,6 +65,7 @@ class Api:
             Api.myMember.respondToField(int(key), value) # Respond to each field
 
         Api.myMember.submitFormResponse()
+        # Create pdf response upload to s3 and store in database: s3 url, fields, form title, index of form, 
         return "Submitted "+Api.myMember.currentForm.name
     
     # Member saves current form
@@ -82,7 +97,7 @@ class Api:
         
         dict = {  }
         for form in Api.myMember.activeForms:
-
+           
             dict.update( {form.formID: 
                           {"index": form.formID,
                            "complete": form.complete, 
@@ -103,6 +118,8 @@ class Api:
                 break
         if form:
             # We found the form! TODO: Also return the path so it can be printed
+
+             # add printable form link as above
             response = {"data": 
                         {"index": form.formID,
                          "complete": form.complete, 
@@ -154,7 +171,9 @@ class Api:
     def __init__(self):
         
         {
+
             #self.app.run(host="0.0.0.0", debug=True, port= 8000)
+
             
         }
 

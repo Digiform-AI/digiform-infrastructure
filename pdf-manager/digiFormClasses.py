@@ -61,12 +61,18 @@ class Member:
         self.currentForm.complete = True
         org = self.currentForm.org
         fields = self.currentForm.fields
+
+        # STORE THE GIVEN NAME SO WE CAN RETURN IT TO THE WEBSITE
+        name = PdfGenerator.getNameByFields(fields)
+        self.firstName = name[0]
+        self.lastName = name[1]
+
         formID = self.currentForm.formID
         # We need the responder's ID.. or can we just pass the responder object themself?
         # I will try to pass responder but I'm wondering how passing objects over the network will be
         # as opposed to passing the ID and then finding the object at the other end.
 
-        now = current_dateTime = datetime.now()
+        now = datetime.now()
 
         
         response = pdfResponse(self, str(now.month) +" / "+str(now.day)+" / "+str(now.year), fields, formID, org)
@@ -155,6 +161,13 @@ class Organization:
         self.members = []
         self.currentForm = None
 
+    async def uploadS3(path, oldLink):
+        # delete old link
+        # upload new file
+        # return new link
+        pass 
+
+
     # NOTE: This should probably add a Member object. at a minimum, it needs to take more info
     # so that we can properly manage and reference the member
     def addMember(self, member):
@@ -186,6 +199,11 @@ class Organization:
 
         formID = len(self.forms)
         newForm = PdfGenerator.generateForm(path, title, formID, due, self)
+
+        # Create, upload and store the path of the printable in s3
+        printablePath = PdfGenerator.printForm(newForm)
+        newForm.printable = Organization.uploadS3(printablePath, "")
+
         self.forms.append(newForm)
         self.currentForm = newForm
         return newForm
@@ -220,13 +238,23 @@ class Organization:
     # We have recieved a member's response! Append it and refresh our view list.
     # We must store this updated list to save the responses on the server
     def receiveFormResponse(self, response):
+
+        # STORE THE s3 BUCKET LINK HERE
+        response.pdf = self.saveResponseAsPdf(response)
+
+        
+
         self.responses.append(response) # Cool, but we want to rather store this in the form's response list, not orgs
         id = response.formID
         form = self.forms[id]
         form.responses.append(response)
 
+        # UPDATE THE s3 EXCEL SHEET AND STORE IT
+        excelPath = PdfGenerator.generateExcel(form)
+        form.excel = Organization.uploadS3(excelPath, form.excel)
+
         # TODO: Here we will refresh the UI on desktop to show the new response, and store the new result (database?)
-        self.saveResponseAsPdf(response) # Creates a pdf with the responses and saves it to pc
+         # Creates a pdf with the responses and saves it to pc
         # TODO: Send email to organization that member has submitted!
         # TODO: Send confirmation email to member that their response was recieved
 
@@ -235,6 +263,7 @@ class Organization:
     # Store the response as a pdf
     # enters the necessary directory, or creates it
     # then, calls generatePdf which implicitly then populates the pdf with our responses
+    #TODO upload to s3 here and return the link
 
     def saveResponseAsPdf(self, response):
 
@@ -254,7 +283,9 @@ class Organization:
 
         path = "responses/"+formName+"/"
 
-        PdfGenerator.generatePdf(response, path)
+        pdf = PdfGenerator.generatePdf(response, path)
+        # TODO upload to s3 here. Then, return the s3 link.
+        return Organization.uploadS3(pdf, "") # pass the new file and the old version which we will unlink.
 
 
     # I uploaded a form on behalf of members. 

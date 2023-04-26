@@ -5,6 +5,7 @@ import cv2, os, random
 import pytesseract
 from pytesseract import Output 
 from PIL import Image
+import requests
 
 # NOTE: the documents directory must contain one file for each page of the multi-page # document (1 image only if 1 page document). This is for multi-page conversion support.
 # NOTE: if the api is called with fields that belong on x pages, the code will error if there are
@@ -62,10 +63,6 @@ class extraction:
         return False
 
     def crop(path, width, height):
-        # we pass width and height because the final output once its straight and cropped must be
-        # the same size as the pdf page so that when we overlay the two they are of the same scale!
-
-        # however, we use w and h which is these values adjusted for the current dpi that way we can properly find the corners.
     
         # load and set dpi
         im = Image.open(path)
@@ -79,6 +76,19 @@ class extraction:
 
         '''Load the image with the new dpi into opencv'''
         img = cv2.imread(path)
+
+        # Make sure it is in portrait rotation
+        h = img.shape[0]
+        w = img.shape[1]
+
+        if (w > h):
+            print('must rotate!')
+            print('w: ', w)
+            print('h: ', h)
+            img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+            cv2.imwrite(path, img)
+
+        # i want to be straight here!
 
         if debug:
             cv2.imshow('Original Image.jpg', img)
@@ -210,9 +220,10 @@ class extraction:
 
         # Apply perspective correction to the image
         img_corrected = cv2.warpPerspective(new_img, M, (round(w), round(h)))
-        # cv2.imwrite('peter.png', img_corrected)
+        
         ''' Make sure the image is the right 90 degree orientation'''
         gray = cv2.cvtColor(img_corrected, cv2.COLOR_BGR2GRAY)
+        cv2.imwrite('peter.png', gray)
         # Perform OCR on the image and get the OSD information
         osd = pytesseract.image_to_osd(gray, output_type=Output.DICT)
 
@@ -256,14 +267,15 @@ class extraction:
             files = os.listdir(path)
 
             for file in files:
-                path = os.path.join(path, file)
-                if os.path.isfile(path):
-                    os.unlink(path)
+                img_path = os.path.join(path, file)
+                if extraction.is_image_file(img_path):
+                    os.unlink(img_path)
     
     def fill_fields(fields):
         # Clear output staging directories (input page is unlinked below after it's crop completes)
         extraction.empty_dir(extraction.output_path)
         extraction.empty_dir(extraction.signature_path)
+        
 
         pageIndex = 0
         ''' Execute for each page '''
@@ -292,16 +304,31 @@ class extraction:
                         # ensure these are the dimensions of the correct page
                         pageHeight = fields[key]["pageHeight"]
                         pageWidth = fields[key]["pageWidth"]
+                        print(pageHeight, pageWidth)
                         break
                 
                 ''' LOAD THE PAGE IMAGE AND CROP TO DESIRED SIZE '''
+                input_img = cv2.imread(path)
+                #straight here
+
+
+                
+
+
+                # crop the portrait image
+                
                 img = extraction.crop(path, pageWidth, pageHeight)
+
+                # update path to the cropped version
+                path = os.path.join(extraction.output_path, filename)
+                img = cv2.resize(img, (round(pageWidth), round(pageHeight)))
 
 
                 if not os.path.exists(extraction.output_path):
                     os.mkdir(extraction.output_path)
 
-                cv2.imwrite(os.path.join(extraction.output_path, (str(pageIndex + 1)+'.jpg')), img)
+                cv2.imwrite(path, img)
+     
 
                 ''' GET THE EXTRACTED DATA (lines)'''
                 url = "https://trigger.extracttable.com"
@@ -312,10 +339,9 @@ class extraction:
                 headers = {
                 'x-api-key': 'Cm2Cts2RBl8UwjCsPfPO9szGhYqsGLrgh2Xly1dW'
                 }
-                # response = requests.request("POST", url, headers=headers, data=payload, files=files)
-                # lines = json.loads(response.text)['Lines'][0]['LinesArray']
-                lines = []
-
+                response = requests.request("POST", url, headers=headers, data=payload, files=files)
+                lines = json.loads(response.text)['Lines'][0]['LinesArray']
+    
                 ''' PREPARING CHECKBOX DETECTION '''
                 gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # first the scanned and cropped page is to become grayscale
 
@@ -331,13 +357,12 @@ class extraction:
                         rect = fields[key]["rect"]
                         is_text = (fields[key]["type"] == "text")
 
-                        # begin managing the fields. If text, find extracted data. If checkbox, analyze the response for it
-                        x1 = ((rect[0] / 72) * extraction.dpi) / pageWidth
-                        h = ((abs(((rect[1] / 72) * extraction.dpi) - ((rect[3] / 72) * extraction.dpi)))) / pageHeight
-                        y2 = ((((pageHeight - rect[1]) / 72) * extraction.dpi) - h) / pageHeight
-                        x2 = ((rect[2] / 72) * extraction.dpi) / pageWidth
+                        x1 = rect[0] / pageWidth
+                        h = abs(rect[1] - rect[3]) / pageHeight
+                        y2 = ((pageHeight - rect[1]) - h) / pageHeight
+                        x2 = rect[2] / pageWidth
                         y1 = y2 - h
-                        
+                        # y .9 - .11 x starts at .26
                         if is_text:
                             # If the name includes 'signature', save the image as signature.
                             if str(fields[key]['value']).casefold().find('signature') != -1:
@@ -346,7 +371,7 @@ class extraction:
                                 # continue to extract and store the response after saving the image.
 
                             # set a tolerance threshold for text searching, then all coordinates
-                            t = ((2.5 / 72) * extraction.dpi ) / pageHeight 
+                            t = 2.5 / pageHeight 
 
                             result = ''
                             for line in lines:
