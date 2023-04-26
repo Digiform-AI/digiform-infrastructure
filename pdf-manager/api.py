@@ -1,13 +1,15 @@
 from flask import Flask, current_app, request
+from dotenv import load_dotenv
 from digiFormClasses import Member, Organization, Server
-from muskaan import extraction
+from extract import extraction
 import json, os
 from flask_cors import CORS, cross_origin
 
-#TODO
-
-
 class Api:
+    load_dotenv('.env')
+    EXTRACT_KEY = my_var = os.getenv('EXTRACT_KEY')
+    AWS_ACCESS_KEY = my_var = os.getenv('AWS_ACCESS_KEY')
+    AWS_SECRET_KEY = my_var = os.getenv('AWS_SECRET_KEY')
 
 
     app = Flask(__name__)
@@ -15,7 +17,10 @@ class Api:
     cross_origin(origins="*")
     server = Server() # Make new static test server
 
+    
     myOrg = server.createOrg("ABC Construction")
+    myOrg.initializeBucket(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+
     newForm = myOrg.generateNewForm("sample.pdf", "My Form", "A basic sample form", "01/01/01")
 
     myMember = Member("Test", "Member")
@@ -42,7 +47,10 @@ class Api:
     def getResponses(id):
         # return all responses to display
         
-        results = {}
+        # get the form & spreadsheet
+        formObject = Api.myOrg.forms[int(id)]
+
+        results = {-1: str(formObject.excel)}
 
         index = 0
         responses = Api.myOrg.responses
@@ -58,6 +66,7 @@ class Api:
                 
                 results.update({index: result})
                 index += 1
+
 
         return results
 
@@ -77,7 +86,7 @@ class Api:
         data = request.form.get('fields')
         fields = json.loads(data)
 
-        updatedFields = extraction.fill_fields(fields)
+        updatedFields = extraction.fill_fields(fields, Api.EXTRACT_KEY)
         return updatedFields 
 
     # Member submits the form they are currently editing
@@ -86,13 +95,11 @@ class Api:
     def submitCurrentForm():
         res = json.loads(request.data)
         fields = res['fields']
-        
 
         for key in fields.keys():
-            print(fields[key])
-            value = fields[key]["value"] # Dictionary of field name : field value, looking for key "value"
+            #print(fields[key])
+            value = fields[key]['value'] # Dictionary of field name : field value, looking for key "value"
             Api.myMember.respondToField(int(key), value) # Respond to each field
-
 
         Api.myMember.submitFormResponse()
         # Create pdf response upload to s3 and store in database: s3 url, fields, form title, index of form, 
@@ -113,7 +120,6 @@ class Api:
     @app.route('/updateField/<fieldIndex>/<newVal>/', methods = ['GET'])
     def updateField(fieldIndex, newVal):
 
-        print(newVal)
 
         Api.myMember.respondToField(int(fieldIndex), newVal)
         return "Successfully set "+Api.myMember.currentForm.fields[int(fieldIndex)].name+" to "+newVal+"!"
@@ -146,6 +152,7 @@ class Api:
     @app.route('/getForm/<id>/', methods = ['GET'])
     def getForm(id):
 
+        formObject = Api.myOrg.forms[int(id)]
         form = None
         for f in Api.myMember.activeForms:
             if f.formID == int(id):
@@ -160,7 +167,7 @@ class Api:
                         {"index": form.formID,
                          "complete": form.complete, 
                          "name": form.name, 
-                         "description": form.description,
+                         "description": formObject.description,
                          "due": form.due, 
                          "organizer": form.org.name,
                          "printable": form.printable,

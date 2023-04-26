@@ -36,7 +36,6 @@ class extraction:
     # saves the given signature image to disk
     def process_signature(ROI, field_name):
         # ensure path exists
-        print('SIGNATURE FOUND')
         if not os.path.exists(extraction.signature_path):
             os.mkdir(extraction.signature_path)
 
@@ -83,9 +82,6 @@ class extraction:
         w = img.shape[1]
 
         if (w > h):
-            print('must rotate!')
-            print('w: ', w)
-            print('h: ', h)
             img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
             cv2.imwrite(path, img)
 
@@ -272,7 +268,7 @@ class extraction:
                 if extraction.is_image_file(img_path):
                     os.unlink(img_path)
     
-    def fill_fields(fields):
+    def fill_fields(fields, api_key):
         # Clear output staging directories (input page is unlinked below after it's crop completes)
         extraction.empty_dir(extraction.output_path)
         extraction.empty_dir(extraction.signature_path)
@@ -288,7 +284,6 @@ class extraction:
 
         # file path to the image taken of this page
         for filename in os.listdir(extraction.input_path):
-            print(filename)
             f = os.path.join(extraction.input_path, filename)
 
         # proceed if it is a file (image)
@@ -305,16 +300,9 @@ class extraction:
                         # ensure these are the dimensions of the correct page
                         pageHeight = fields[key]["pageHeight"]
                         pageWidth = fields[key]["pageWidth"]
-                        print(pageHeight, pageWidth)
                         break
                 
                 ''' LOAD THE PAGE IMAGE AND CROP TO DESIRED SIZE '''
-                input_img = cv2.imread(path)
-                #straight here
-
-
-                
-
 
                 # crop the portrait image
                 
@@ -338,12 +326,12 @@ class extraction:
                 ('input',('form.jpg',open(path,'rb'),'image/jpg'))
                 ]
                 headers = {
-                'x-api-key': 'H3OrLjI69bfrELpV0sIwbA5R1Y6HLF7lBrYtysWb'
+                'x-api-key': api_key
                 }
                 response = requests.request("POST", url, headers=headers, data=payload, files=files)
-           
+                #print(response.text)
                 lines = json.loads(response.text)['Lines'][0]['LinesArray']
-    
+
                 ''' PREPARING CHECKBOX DETECTION '''
                 gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # first the scanned and cropped page is to become grayscale
 
