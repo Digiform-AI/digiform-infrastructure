@@ -388,14 +388,50 @@ class PdfGenerator():
             writer.write(output_stream)
         output_stream.close()
 
-        #NOTE: Attempt to flatten did not fix invisible text. Try converting to image perhaps
-        # fillpdfs.flatten_pdf(newFile, 'flat.pdf', True)
+        #fillpdfs.flatten_pdf(newFile, 'flat.pdf', True)
 
+        # now overlay signatures ontop of it
+        signed_pdf = PdfGenerator.addSignatures(newFile, responses)
+
+        return signed_pdf # return path to upload to s3
+
+        #NOTE: Attempt to flatten did not fix invisible text. Try converting to image perhaps
+        
+
+
+
+
+    # given fields, return member name
+    # NOTE this gets called after extract, and before saving response.
+    def getNameByFields(fields):
+        for field in fields:
+            # Field says firstname, so store the first name
+            if field.name in Consts.firstNameFields:
+                firstName = field.value.capitalize()
+
+            # Field says name so its probably first and last
+            if field.name in Consts.nameFields:
+                splitName = field.value.split(" ")
+                
+                # Store first and maybe last name
+                firstName = splitName[0].capitalize()
+                if len(splitName) == 2:
+                    lastName = splitName[1].capitalize()
+
+            # We are given last name so store last name
+            if field.name in Consts.lastNameFields:
+                lastName = field.value.capitalize()
+        
+        return [firstName, lastName]
     
     # This function will generate a new form object. It can be thought of as "Starting an Event", and members of the organization
     # are per say "Invited to the event". In this case, that means being sent a "pdfRequest" object - a request to fill in
     # the fields. This form object will be referenced in the code for Organization, when sendRequest(form, client) is called.
 
+
+
+
+    
     # We also create a directory where input files are uploaded to and stored
     def generateForm(path, title, formID, due, org):
 
@@ -499,6 +535,8 @@ class PdfGenerator():
                         fieldIndex = fieldIndex + 1
             curFieldPage+=1
 
+            
+
         return pdfForm(title, formID, due, org, myFields, path)
 
     # Creates borders around the text to tell user where to write responses
@@ -569,6 +607,70 @@ class PdfGenerator():
                 os.unlink(path)
 
         return newPath
+    
+    # draw signatures ontop of the pdf at the correct location
+    def addSignatures(path, fields):
+
+        existing_pdf = PdfReader(open(path, "rb")) # Store the existing pdf, the copy which we will overlay the boxes to
+        output = PdfWriter() # designate a file for the final output
+
+        stage_path = 'signature_stage'
+
+        # make sure the staging directory exists
+        if not os.path.exists(stage_path):
+            os.mkdir(stage_path)
+        
+
+        # For each page, generate a page on a new buffer of just boxes. Later, we overlay the two.
+        for i in range(len(existing_pdf.pages)):
+            w, h = 0, 0
+
+            # to gather the page size
+            for field in fields:
+                if field.pageIndex == i: # Make sure this field is on this page!
+                    w, h = field.pageWidth, field.pageHeight # Save this page's width and height to draw a surround box
+                    break
+
+            # we can now make the canvas for this page because we know the size
+            # if we get an error there may be no fields on the page. Detect that above and set pagesize to letter if so
+            cur_page = "page"+str(i + 1)+".pdf"
+            can = canvas.Canvas(os.path.join(stage_path, cur_page), pagesize=(w,h))
+
+            
+            # For each signature field on this page find the image and add it
+            for field in fields:
+              
+                if field.name.lower().find('signature') != -1:
+                    if field.pageIndex == i: # Make sure this field is on this page!
+                        img = 'documents/signatures/' + field.name + '.png'
+                        can.drawImage(img, field.rect[0], field.rect[1], field.rect[2] - field.rect[0], field.rect[3] - field.rect[1])
+
+            can.save() # page is done
+
+            
+        
+        # Merge all pages together
+        for i in range(len(existing_pdf.pages)):
+            
+            new_page_pdf = PdfReader( open(os.path.join(stage_path, "page"+str(i + 1)+".pdf"), "rb"))
+            page = existing_pdf.pages[i]
+            page.merge_page(new_page_pdf.pages[0])
+            output.add_page(page)
+            
+
+        outputStream = open(path, "wb")
+        output.write(outputStream)
+        outputStream.close()
+
+        # clear the staging directory as we have used the new pages of images
+        files = os.listdir(stage_path)
+
+        for file in files:
+            path = os.path.join(stage_path, file)
+            if os.path.isfile(path):
+                os.unlink(path)
+
+        return path
     
     # decrypt the given pdf and return the path to the new doc
     def decrypt_pdf(path):

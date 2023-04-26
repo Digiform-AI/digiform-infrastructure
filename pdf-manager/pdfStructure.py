@@ -47,16 +47,21 @@ class pdfResponse:
         self.fields = fields
         self.org = org
         self.formID = formID
+        self.pdf = "" # link to the resposnse to view it
     
 class pdfForm:
     def __init__(self, name, formID, due, org, fields, path):
 
         # Fields determined by server (on creation)
+        # TODO pass printable s3 link when being created in pdfgenerator
+        # TODO generate, delete old, upload new and update excel reference each response recieved
         self.name = name
         self.due = due
         self.org = org
         self.fields = fields
         self.path = path
+        self.printable = "" # link to the printable version. Populated when form is created through organization
+        self.excel = "" #link to excel sheet. Updated when a new response is made
 
         # No responses by default, of course
         # The FormID is used to connect responses to the correct form.
