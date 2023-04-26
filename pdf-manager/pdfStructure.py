@@ -16,7 +16,7 @@
         # This pdf object will then be updated with the field response values as well as client data upon submission.
 
 class pdfRequest:
-    def __init__(self, name, due, org, fields, formID):
+    def __init__(self, name, due, org, fields, formID, printable):
         # Fields determined by server, replicated from pdfForm before sending this request obj to client
         # This object will be created based off of the associated pdfForm object and sent out upon a delivery request
         self.name = name
@@ -25,6 +25,7 @@ class pdfRequest:
         self.fields = fields
         self.formID = formID
         self.complete = False
+        self.printable = printable
 
     # Display this request object: Mostly debug for now
     # NOTE: Eventually, will pull up page and populate with field entry instead.
@@ -39,24 +40,26 @@ class pdfRequest:
 
 
 class pdfResponse:
-    def __init__(self, responder, completionDate, fields, formID, org):
+    def __init__(self, responder, completionDate, fields, formID, org, responderName):
 
         # Fields that server will fill in after reciept based on sending client
         self.completionDate = completionDate
         self.responder = responder
+        self.responderName = responderName
         self.fields = fields
         self.org = org
         self.formID = formID
         self.pdf = "" # link to the resposnse to view it
     
 class pdfForm:
-    def __init__(self, name, formID, due, org, fields, path):
+    def __init__(self, name, description, formID, due, org, fields, path):
 
         # Fields determined by server (on creation)
         # TODO pass printable s3 link when being created in pdfgenerator
         # TODO generate, delete old, upload new and update excel reference each response recieved
         self.name = name
         self.due = due
+        self.description = description
         self.org = org
         self.fields = fields
         self.path = path
@@ -129,8 +132,8 @@ class Consts:
     # DO NOT EDIT (unless you're really, really smart)
     textTypeID = "/Tx"
     checkTypeID = "/Btn"
-    dropTypeID = "/Ch" # /DV is default vals, /Opt is list of options.
+    dropTypeID = "/Ch" # /DV is default valss /Opt is list of options.
 
-    nameFields = ["name", "Name"]
-    firstNameFields = ["firstName", "first", "First", "First Name", "FirstName", "first name", "First name", "Firstname"]
+    nameFields = ["Name of Payee", "Client Name","name", "Name"]
+    firstNameFields = [ "firstName", "first", "First", "First Name", "FirstName", "first name", "First name", "Firstname"]
     lastNameFields = ["lastName", "first", "Last", "Last Name", "LastName", "first name", "Last name", "Lastname"]

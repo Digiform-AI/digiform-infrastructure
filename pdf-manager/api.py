@@ -2,29 +2,21 @@ from flask import Flask, current_app, request
 from digiFormClasses import Member, Organization, Server
 from muskaan import extraction
 import json, os
+from flask_cors import CORS, cross_origin
 
-# for get forms -
-# update to description not organization
-
-# getResponses/<id> endpoint
-# send fields, name, response date FOR EACH
-
-#bucket: 2 folders
-# one is the printable version that link is in the database for each form
-# one collection for responses
-# one collection for forms: contains url for printable form
-
-#add signatures to the generated pdf before sending to s3
+#TODO
 
 
 class Api:
 
 
     app = Flask(__name__)
+    CORS(app)
+    cross_origin(origins="*")
     server = Server() # Make new static test server
 
     myOrg = server.createOrg("ABC Construction")
-    newForm = myOrg.generateNewForm("sample.pdf", "My Form", "01/01/01")
+    newForm = myOrg.generateNewForm("sample.pdf", "My Form", "A basic sample form", "01/01/01")
 
     myMember = Member("Test", "Member")
     myOrg.addMember(myMember)
@@ -32,10 +24,42 @@ class Api:
     myOrg.sendFormRequest(newForm, myMember)
     myMember.selectForm(myOrg, 0) # Select this form for updates
 
-    inspForm = myOrg.generateNewForm("inspection.pdf", "Inspection", "01/01/01")
-    myOrg.sendFormRequest(inspForm, myMember)
-    myMember.selectForm(myOrg, 1) # Select this form for updates
+    myMember.respondToField(0, "Hello!")
+    myMember.submitFormResponse()
 
+    myMember.selectForm(myOrg, 0) # Select this form for updates
+    myMember.respondToField(0, "Response2")
+    myMember.submitFormResponse()
+
+    inspForm = myOrg.generateNewForm("inspection.pdf", "Inspection", "For residential home inspections", "01/01/01")
+    myOrg.sendFormRequest(inspForm, myMember)
+
+    dispForm = myOrg.generateNewForm("disburse.pdf", "Disbursement", "UAlbany Request for Disbursement", "01/01/01")
+    myOrg.sendFormRequest(dispForm, myMember)
+    #myMember.selectForm(myOrg, 1) # Select this form for updates
+
+    @app.route('/getResponses/<id>', methods = ['POST', 'GET'])
+    def getResponses(id):
+        # return all responses to display
+        
+        results = {}
+
+        index = 0
+        responses = Api.myOrg.responses
+        
+        for response in responses:
+            if (int(response.formID) == int(id)):
+                
+                result = {
+                    'date': response.completionDate,
+                    'name': response.responderName,
+                    'pdf': response.pdf # link to the resposnse to view it
+                }
+                
+                results.update({index: result})
+                index += 1
+
+        return results
 
     @app.route('/extract', methods = ['POST'])
     def extract():
@@ -57,12 +81,18 @@ class Api:
         return updatedFields 
 
     # Member submits the form they are currently editing
+    # TODO here we create the response through submitformresponse
     @app.route('/submitForm/', methods = ['GET','POST'])
     def submitCurrentForm():
-        res = request.body
-        for key in res.keys():
-            value = res[key]["value"] # Dictionary of field name : field value, looking for key "value"
+        res = json.loads(request.data)
+        fields = res['fields']
+        
+
+        for key in fields.keys():
+            print(fields[key])
+            value = fields[key]["value"] # Dictionary of field name : field value, looking for key "value"
             Api.myMember.respondToField(int(key), value) # Respond to each field
+
 
         Api.myMember.submitFormResponse()
         # Create pdf response upload to s3 and store in database: s3 url, fields, form title, index of form, 
@@ -91,17 +121,20 @@ class Api:
 
 
     # This member will retrieve all its form requests
+    
     @app.route('/getAllForms/', methods = ['GET'])
     def getAllForms():
         
         
         dict = {  }
         for form in Api.myMember.activeForms:
+            formObject = Api.myOrg.forms[form.formID]
            
             dict.update( {form.formID: 
                           {"index": form.formID,
                            "complete": form.complete, 
-                           "name": form.name, 
+                           "name": form.name,
+                           "description": formObject.description,
                            "due": form.due, 
                            "organizer": form.org.name}} )
 
@@ -109,23 +142,29 @@ class Api:
     
     # View this form that belongs to this member
     # Specific form details from id. This id is not index of activeForms. We must search active forms for this formID.
+    # TODO add s3 link for printable
     @app.route('/getForm/<id>/', methods = ['GET'])
     def getForm(id):
+
         form = None
         for f in Api.myMember.activeForms:
             if f.formID == int(id):
                 form = f
+                Api.myMember.selectForm(Api.myOrg, f.formID)
                 break
         if form:
             # We found the form! TODO: Also return the path so it can be printed
-
+            #print(Api.myMember.currentForm.name)
              # add printable form link as above
             response = {"data": 
                         {"index": form.formID,
                          "complete": form.complete, 
                          "name": form.name, 
+                         "description": form.description,
                          "due": form.due, 
-                         "organizer": form.org.name}}
+                         "organizer": form.org.name,
+                         "printable": form.printable,
+                         }}
 
             # Now add the fields
             # NOTE: I included the height of the containing page for coordinate localization.
@@ -152,13 +191,6 @@ class Api:
                       "groupName": field.choiceGroup,
                       "choiceName": field.choiceValue,
                       } } )
-            # # temporary for testing without api
-            # checkbox = (abs(h/w) > 0.9 and abs(h/w) < 1.1)
-
-            # # final code once hooked up to api
-
-            # for field in fields:
-            #     textFromCoordinates(field.rect[0], field.rect[1], field.rect[2], field.rect[3], field.pageHeight, field.type == "checkbox")
                 
             response.update( {"fields": fields} )
             
@@ -172,7 +204,7 @@ class Api:
         
         {
 
-            #self.app.run(host="0.0.0.0", debug=True, port= 8000)
+            self.app.run(host="0.0.0.0", debug=True, port= 8000)
 
             
         }

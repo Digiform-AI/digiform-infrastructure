@@ -289,6 +289,8 @@ class PdfGenerator():
         worksheet.autofit()
         workbook.close()
 
+        return form.name+".xlsx"
+
         
     # This function will take an existing form response object
     # that has been return with it's responses by a client and create a new blank forum, then fill it in.
@@ -404,6 +406,8 @@ class PdfGenerator():
     # given fields, return member name
     # NOTE this gets called after extract, and before saving response.
     def getNameByFields(fields):
+        firstName = "Name"
+        lastName = ""
         for field in fields:
             # Field says firstname, so store the first name
             if field.name in Consts.firstNameFields:
@@ -433,7 +437,7 @@ class PdfGenerator():
 
     
     # We also create a directory where input files are uploaded to and stored
-    def generateForm(path, title, formID, due, org):
+    def generateForm(path, title, desc, formID, due, org):
 
         if not os.path.isdir("input/"+title):
             os.mkdir("input/"+title)
@@ -537,7 +541,7 @@ class PdfGenerator():
 
             
 
-        return pdfForm(title, formID, due, org, myFields, path)
+        return pdfForm(title, desc, formID, due, org, myFields, path)
 
     # Creates borders around the text to tell user where to write responses
     # Also creates a border on the outside of the document so we know where to crop after the scan
@@ -619,6 +623,13 @@ class PdfGenerator():
         # make sure the staging directory exists
         if not os.path.exists(stage_path):
             os.mkdir(stage_path)
+
+        # empty previous elements
+        files = os.listdir(stage_path)
+        for file in files:
+            path = os.path.join(stage_path, file)
+            if os.path.isfile(path):
+                os.unlink(path)
         
 
         # For each page, generate a page on a new buffer of just boxes. Later, we overlay the two.
@@ -654,21 +665,14 @@ class PdfGenerator():
             
             new_page_pdf = PdfReader( open(os.path.join(stage_path, "page"+str(i + 1)+".pdf"), "rb"))
             page = existing_pdf.pages[i]
-            page.merge_page(new_page_pdf.pages[0])
+            if (len(new_page_pdf.pages) > 0):
+                page.merge_page(new_page_pdf.pages[0])
             output.add_page(page)
-            
-
+        
         outputStream = open(path, "wb")
         output.write(outputStream)
         outputStream.close()
 
-        # clear the staging directory as we have used the new pages of images
-        files = os.listdir(stage_path)
-
-        for file in files:
-            path = os.path.join(stage_path, file)
-            if os.path.isfile(path):
-                os.unlink(path)
 
         return path
     
