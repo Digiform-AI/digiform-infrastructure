@@ -141,7 +141,8 @@ class Api:
                            "complete": form.complete, 
                            "name": form.name,
                            "description": formObject.description,
-                           "due": form.due, 
+                           "due": form.due,
+                           "printable": form.printable,
                            "organizer": form.org.name}} )
 
         return dict
