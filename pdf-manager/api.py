@@ -21,27 +21,19 @@ class Api:
     myOrg = server.createOrg("ABC Construction")
     myOrg.initializeBucket(AWS_ACCESS_KEY, AWS_SECRET_KEY)
 
-    newForm = myOrg.generateNewForm("sample.pdf", "My Form", "A basic sample form", "01/01/01")
+    newForm = myOrg.generateNewForm("sample-clean.pdf", "My Form", "A basic sample form", "01/01/01")
 
     myMember = Member("Test", "Member")
     myOrg.addMember(myMember)
 
     myOrg.sendFormRequest(newForm, myMember)
-    myMember.selectForm(myOrg, 0) # Select this form for updates
 
-    myMember.respondToField(0, "Hello!")
-    myMember.submitFormResponse()
-
-    myMember.selectForm(myOrg, 0) # Select this form for updates
-    myMember.respondToField(0, "Response2")
-    myMember.submitFormResponse()
 
     inspForm = myOrg.generateNewForm("inspection.pdf", "Inspection", "For residential home inspections", "01/01/01")
     myOrg.sendFormRequest(inspForm, myMember)
 
     dispForm = myOrg.generateNewForm("disburse.pdf", "Disbursement", "UAlbany Request for Disbursement", "01/01/01")
     myOrg.sendFormRequest(dispForm, myMember)
-    #myMember.selectForm(myOrg, 1) # Select this form for updates
 
     @app.route('/getResponses/<id>', methods = ['POST', 'GET'])
     def getResponses(id):
