@@ -68,7 +68,6 @@ export default DynamicForm;
 
 
 
-
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import PDFView from 'react-native-pdf';
