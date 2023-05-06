@@ -33,6 +33,7 @@ for file in myFileList:
     #img_grey.save('result.png')
     #img_grey.show()
 
+    
     # Save Greyscale values
     value = np.asarray(img_grey.getdata(), dtype=np.int).reshape((img_grey.size[1], img_grey.size[0]))
     value = value.flatten()
