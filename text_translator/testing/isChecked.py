@@ -10,6 +10,7 @@ def crop_img(img, scale=1.0):
     return img_cropped
 
 
+
 # Determines whether this image file is checked as yes
 def isChecked(path):
     THRESHOLD = 100 # Threshhold for stray marks, in pixels
