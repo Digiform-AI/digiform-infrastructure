@@ -10,6 +10,7 @@ const PrintScreen = () => {
     setAvailablePrinters(printers);
   };
 
+  
   return (
     <View>
       <TouchableOpacity onPress={handlePrintPress}>
