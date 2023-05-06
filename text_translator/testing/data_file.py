@@ -17,7 +17,6 @@ import re
 import numpy as np
 
 
-
 def textFromCoordinates(a, b, c, d):
     x = round((a/72) * 200)
     h = round(abs(((b / 72)*200) - ((d / 72) * 200)))
