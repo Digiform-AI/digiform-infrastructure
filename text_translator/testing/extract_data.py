@@ -22,6 +22,7 @@ import json
 import requests
 
 
+
 def crop_img(img, scale=1.0):
     center_x, center_y = img.shape[1] / 2, img.shape[0] / 2
     width_scaled, height_scaled = img.shape[1] * scale, img.shape[0] * scale
