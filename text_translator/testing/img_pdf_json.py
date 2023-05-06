@@ -11,7 +11,6 @@ from tkinter import filedialog
 import os
 
 
-
 # def performOCR(image):
 #     # Perform OCR
 #     text = pytesseract.image_to_string(image)
