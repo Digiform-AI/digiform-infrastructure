@@ -101,7 +101,6 @@ if file_name.lower().endswith(('.png', '.jpg', '.jpeg')):
 
     
 
-
     # final code once hooked up to api
     # for field in fields:
     #     textFromCoordinates(field.rect[0], field.rect[1], field.rect[2], field.rect[3], field.pageHeight, field.type == "checkbox")
