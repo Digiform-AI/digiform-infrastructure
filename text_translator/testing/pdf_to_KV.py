@@ -2,6 +2,7 @@ import fitz
 
 txt = []
 
+
 '''
 doc = fitz.open("Bhashampally.pdf")            # some existing PDF
 page = doc[0]
